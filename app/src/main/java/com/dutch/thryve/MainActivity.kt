@@ -35,10 +35,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.dutch.thryve.ThryveApplication.Companion.LOG_TAG
 import com.dutch.thryve.ui.screens.DailyScreen
+import com.dutch.thryve.ui.screens.SettingsScreen
 import com.dutch.thryve.ui.screens.SplashScreen
 import com.dutch.thryve.ui.theme.ThryveTheme
+import dagger.hilt.android.AndroidEntryPoint
 
-//@AndroidEntryPoint
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val TAG = LOG_TAG + "__MainActivity"
 
@@ -63,7 +65,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Settings : Screen("settings", "Settings", Icons.Default.Settings)
 }
 
-val bottomNavItems = listOf(Screen.Activity, Screen.Settings)
+val bottomNavItems = listOf(Screen.Dashboard, Screen.Settings)
 
 @Composable
 fun MainScreen() {
@@ -83,6 +85,7 @@ fun MainScreen() {
         ) {
             composable(Screen.Splash.route) { SplashScreen(navController) }
             composable(Screen.Dashboard.route) { DailyScreen(navController) }
+            composable(Screen.Settings.route) { SettingsScreen(navController) }
         }
     }
 }
