@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android.plugin)
     alias(libs.plugins.ksp.plugin)
+    alias(libs.plugins.kotlin.serialization)
+//    id("kotlin-serialization")
 }
 
 android {
@@ -71,4 +73,7 @@ dependencies {
     //room
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
+
+    //json
+    implementation(libs.kotlinx.serialization.json)
 }

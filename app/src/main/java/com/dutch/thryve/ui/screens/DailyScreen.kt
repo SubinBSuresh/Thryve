@@ -123,6 +123,7 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
             ) {
                 // Calories Card
                 CaloriesCard(uiState.dailySummary)
+                viewModel.logMeal("10boiled eggs, 2 scoops of whey mixed with water, one scoop oats")
 
                 // Macros Card
                 MacrosCard(uiState.dailySummary)

@@ -16,6 +16,7 @@ roomRuntimeAndroid = "2.8.2"
 places = "5.0.0"
 hiltComposeNav = "1.2.0"
 ksp = "2.0.21-1.0.27"
+kotlinxSerialization = "1.6.0"
 
 
 [libraries]
@@ -44,10 +45,11 @@ androidx-room-runtime-android = { group = "androidx.room", name = "room-runtime-
 places = { group = "com.google.android.libraries.places", name = "places", version.ref = "places" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltComposeNav" }
 
-
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 hilt-android-plugin = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp-plugin = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" } # Assuming kotlinVersion is defined

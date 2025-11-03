@@ -1,7 +1,10 @@
 package com.dutch.thryve.domain
 
+import android.util.Log
+import androidx.compose.material3.Tab
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dutch.thryve.ai.GeminiService
 import com.dutch.thryve.data.DailySummary
 import com.dutch.thryve.data.DailySummary.Companion.empty
 import com.dutch.thryve.data.MealLog
@@ -16,6 +19,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -23,7 +27,7 @@ import javax.inject.Inject
 private const val CURRENT_USER_ID = "mock_user123"
 
 @HiltViewModel
-class DailyViewModel @Inject constructor(private val repository: TrackerRepository) : ViewModel() {
+class DailyViewModel @Inject constructor(private val repository: TrackerRepository, private val geminiService: GeminiService) : ViewModel() {
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
@@ -54,7 +58,14 @@ class DailyViewModel @Inject constructor(private val repository: TrackerReposito
     }
 
 
-    fun logMeal(mealDescription: String) {}
+    fun logMeal(mealDescription: String) {
+        viewModelScope.launch {
+            // ... (Error handling, state updates)
+            val mealLog = geminiService.analyzeMeal(mealDescription, CalendarUiState().selectedDate)
+            Log.i("dutch", "mealLog : ${mealLog?.calories}")
+            // ... (Save mealLog to repository if successful)
+        }
+    }
     fun toggleInputDialog(toggle: Boolean) {
 
     }
