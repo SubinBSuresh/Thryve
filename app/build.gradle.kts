@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.hilt.android.plugin)
     alias(libs.plugins.ksp.plugin)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.google.gms.google.services)
 //    id("kotlin-serialization")
 }
 
@@ -54,6 +55,11 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.room.runtime.android)
     implementation(libs.places)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

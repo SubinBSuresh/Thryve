@@ -23,7 +23,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -34,6 +38,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.dutch.thryve.ThryveApplication.Companion.LOG_TAG
+import com.dutch.thryve.data.repository.FirebasePRRepositoryImpl
+import com.dutch.thryve.domain.model.ConnectionResult
 import com.dutch.thryve.ui.theme.ThryveTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -70,6 +76,17 @@ fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    var connectionResult by remember { mutableStateOf<ConnectionResult?>(null) }
+
+    // When a connection result comes in, if successful, create the ViewModel
+    LaunchedEffect(connectionResult) {
+        val result = connectionResult
+        if (result != null && result.isReady && result.userId != null) {
+            // FIREBASE IS CONNECTED. Now create the data layer with the known userId.
+            val repository = FirebasePRRepositoryImpl()
+//            dailyViewModel = DailyViewModel(repository, result.userId)
+        }
+    }
 
     Scaffold(bottomBar = {
         if (currentRoute != Screen.Splash.route) {
@@ -81,7 +98,12 @@ fun MainScreen() {
             startDestination = Screen.Splash.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Splash.route) { SplashScreen(navController) }
+            composable(Screen.Splash.route) {
+                // The Splash screen performs the connection and updates the result state here
+                SplashScreen(navController) { result ->
+                    connectionResult = result
+                }
+            }
             composable(Screen.Dashboard.route) { DailyScreen(navController) }
             composable(Screen.PR.route) { PRScreen(navController) }
         }

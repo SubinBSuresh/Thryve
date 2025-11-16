@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -24,22 +25,40 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.dutch.thryve.domain.model.ConnectionResult
+import com.dutch.thryve.domain.model.FirebaseConnector
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(navController: NavHostController) {
+fun SplashScreen(
+    navController: NavHostController,
+    onConnectionResult: (ConnectionResult) -> Unit // Passes the result back up
+) {
 
     var isTitleVisisble by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<ConnectionResult?>(null) }
+    val firebaseConnector = remember { FirebaseConnector() }
 
-
-    //navigate after 2s
+    // 1. Start the connection immediately
     LaunchedEffect(Unit) {
         isTitleVisisble = true
-        delay(2000L)
-        navController.popBackStack()
-        navController.navigate(Screen.Dashboard.route)
+        delay(500L) // Wait for title animation
+
+        // --- CORE FIREBASE CONNECTION/AUTH ---
+        val connectionResult = firebaseConnector.initializeAndSignIn()
+        result = connectionResult
+        onConnectionResult(connectionResult) // Pass the crucial userId/ready state back
     }
 
+    // 2. Navigate when the connection is successful and a minimum time has passed
+    LaunchedEffect(result) {
+        val currentResult = result
+        if (currentResult != null && currentResult.isReady && currentResult.userId != null) {
+            delay(500L) // Ensure smooth transition (minimum 2s total time)
+            navController.popBackStack()
+            navController.navigate(Screen.Dashboard.route)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -55,8 +74,30 @@ fun SplashScreen(navController: NavHostController) {
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-        LinearProgressIndicator(modifier = Modifier.width(128.dp))
 
+        // Display progress or error state
+        when {
+            result?.error != null -> {
+                Text(
+                    text = "Connection Failed: ${result!!.error}",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
 
+            result == null || result?.isReady == false -> {
+                // Connecting
+                LinearProgressIndicator(
+                    modifier = Modifier.width(128.dp), color = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+            // Ready, waiting for navigation delay
+            else -> {
+                LinearProgressIndicator(
+                    modifier = Modifier.width(128.dp),
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
+                )
+            }
+        }
     }
 }
