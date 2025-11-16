@@ -1,10 +1,9 @@
-package com.dutch.thryve.data
+package com.dutch.thryve.domain.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.time.LocalDate
 import java.util.UUID
-
 
 @Entity(tableName = "meal")
 data class MealData(

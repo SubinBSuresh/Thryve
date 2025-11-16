@@ -1,4 +1,4 @@
-package com.dutch.thryve.data
+package com.dutch.thryve.domain.model
 
 import java.time.LocalDate
 

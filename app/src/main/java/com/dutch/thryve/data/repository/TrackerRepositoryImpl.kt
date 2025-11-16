@@ -1,5 +1,8 @@
-package com.dutch.thryve.data
+package com.dutch.thryve.data.repository
 
+import com.dutch.thryve.domain.model.MealLog
+import com.dutch.thryve.data.dao.TrackerDao
+import com.dutch.thryve.domain.repository.TrackerRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -8,11 +11,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class TrackerRepository @Inject constructor(private val trackerDao: TrackerDao){
+class TrackerRepositoryImpl @Inject constructor(private val trackerDao: TrackerDao) :
+    TrackerRepository {
 
     private val allLogsFlow = MutableStateFlow(MockData.generateMockLogs())
 
-    fun getLogsForDate(userId: String, date: java.time.LocalDate): Flow<List<MealLog>>{
+    override fun getLogsForDate(userId: String, date: LocalDate): Flow<List<MealLog>> {
 
         return allLogsFlow.map { allLogs ->
             allLogs
@@ -21,6 +25,17 @@ class TrackerRepository @Inject constructor(private val trackerDao: TrackerDao){
         }
     }
 
+    override suspend fun insertLog(log: MealLog) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteLog(id: String) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun syncLogs(userId: String): List<MealLog> {
+        TODO("Not yet implemented")
+    }
 
 
     private object MockData {

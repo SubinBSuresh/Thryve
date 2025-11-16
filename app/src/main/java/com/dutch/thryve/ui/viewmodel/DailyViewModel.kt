@@ -1,14 +1,13 @@
-package com.dutch.thryve.domain
+package com.dutch.thryve.ui.viewmodel
 
 import android.util.Log
-import androidx.compose.material3.Tab
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dutch.thryve.ai.GeminiService
-import com.dutch.thryve.data.DailySummary
-import com.dutch.thryve.data.DailySummary.Companion.empty
-import com.dutch.thryve.data.MealLog
-import com.dutch.thryve.data.TrackerRepository
+import com.dutch.thryve.domain.model.DailySummary
+import com.dutch.thryve.domain.model.DailySummary.Companion.empty
+import com.dutch.thryve.domain.model.MealLog
+import com.dutch.thryve.data.repository.TrackerRepositoryImpl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +26,7 @@ import javax.inject.Inject
 private const val CURRENT_USER_ID = "mock_user123"
 
 @HiltViewModel
-class DailyViewModel @Inject constructor(private val repository: TrackerRepository, private val geminiService: GeminiService) : ViewModel() {
+class DailyViewModel @Inject constructor(private val repository: TrackerRepositoryImpl, private val geminiService: GeminiService) : ViewModel() {
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 

@@ -1,6 +1,6 @@
 package com.dutch.thryve.ai
 
-import com.dutch.thryve.data.MealLog
+import com.dutch.thryve.domain.model.MealLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -93,21 +93,14 @@ data class CandidateResponse(val content: ContentResponse)
 @Serializable
 data class GeminiResponse(val candidates: List<CandidateResponse>)
 
-// --- END API RESPONSE CLASSES ---
-
-
-/**
- * Implements the actual call to the Gemini API using structured output.
- */
 class GeminiService @Inject constructor() {
 
     private val json = Json {
         ignoreUnknownKeys = true
         prettyPrint = true
-        coerceInputValues = true // Helps handle potential nulls/defaults gracefully
+        coerceInputValues = true
     }
 
-    // Define the schema required for the AI output
     private val analysisSchema = AnalysisSchema(
         type = "OBJECT",
         properties = mapOf(
@@ -128,17 +121,14 @@ class GeminiService @Inject constructor() {
     """.trimIndent()
 
     suspend fun analyzeMeal(mealDescription: String, date: LocalDate): MealLog? {
-
-        // --- API Key Check ---
         if (API_KEY.isBlank()) {
             System.err.println("FATAL ERROR: The Gemini API Key is missing. Please set the API_KEY constant in DefaultGeminiService.kt.")
             return null
         }
-        // ---------------------
 
         val userQuery = "Analyze the nutritional content of the following meal description: $mealDescription"
 
-        // Construct the full API payload
+        // constructing api payload
         val payload = GeminiRequest(
             contents = listOf(Content(parts = listOf(Part(text = userQuery)))),
             tools = listOf(Tool(google_search = emptyMap())),
@@ -151,7 +141,7 @@ class GeminiService @Inject constructor() {
 
         val payloadJson = json.encodeToString(payload)
 
-        // Make the network call
+        //nw call
         val responseText = try {
             makePostRequest(API_URL, payloadJson)
         } catch (e: Exception) {
@@ -160,7 +150,7 @@ class GeminiService @Inject constructor() {
             return null
         }
 
-        // Process the response
+        //process response
         return try {
 
             // 1. Decode the full API response into our strongly-typed object

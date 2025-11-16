@@ -1,4 +1,4 @@
-package com.dutch.thryve.data
+package com.dutch.thryve.data.dao
 
 import androidx.room.Dao
 

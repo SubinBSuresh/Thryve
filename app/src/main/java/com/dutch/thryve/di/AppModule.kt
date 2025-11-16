@@ -2,8 +2,9 @@ package com.dutch.thryve.di
 
 import android.content.Context
 import androidx.room.Room
-import com.dutch.thryve.data.TrackerDao
-import com.dutch.thryve.data.TrackerDatabase
+import com.dutch.thryve.data.dao.PRDao
+import com.dutch.thryve.data.dao.TrackerDao
+import com.dutch.thryve.db.TrackerDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,7 +25,13 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideDao(database: TrackerDatabase): TrackerDao {
+    fun provideTrackerDao(database: TrackerDatabase): TrackerDao {
         return database.trackerDao()
+    }
+
+    @Provides
+    @Singleton
+    fun providePRDao(database: TrackerDatabase) : PRDao{
+        return database.prDao()
     }
 }
