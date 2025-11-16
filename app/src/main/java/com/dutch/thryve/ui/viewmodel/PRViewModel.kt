@@ -36,7 +36,7 @@ class PRViewModel @Inject constructor(private val repository: PRRepositoryImpl) 
             }
 
             // NOTE: In a real app, you would call a repository here:
-             repository.savePersonalRecord(newRecord)
+//             repository.savePersonalRecord(newRecord)
         }
     }
 

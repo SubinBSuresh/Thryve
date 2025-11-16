@@ -1,6 +1,8 @@
 package com.dutch.thryve
 
 import android.app.Application
+import android.content.Context
+import com.google.firebase.FirebaseApp
 import dagger.hilt.android.HiltAndroidApp
 
 
@@ -10,4 +12,11 @@ class ThryveApplication: Application() {
         val LOG_TAG = "THRYVE"
 
     }
+
+    override fun onCreate() {
+        super.onCreate()
+        FirebaseApp.initializeApp(this)
+    }
 }
+
+

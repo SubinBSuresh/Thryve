@@ -24,39 +24,41 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.dutch.thryve.domain.model.ConnectionResult
-import com.dutch.thryve.domain.model.FirebaseConnector
+import com.dutch.thryve.ui.viewmodel.FirebaseViewModel
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
-    navController: NavHostController,
-    onConnectionResult: (ConnectionResult) -> Unit // Passes the result back up
+    navController: NavHostController, viewModel: FirebaseViewModel = hiltViewModel()
 ) {
-
     var isTitleVisisble by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<ConnectionResult?>(null) }
-    val firebaseConnector = remember { FirebaseConnector() }
 
-    // 1. Start the connection immediately
+
+//    LaunchedEffect(Unit) {
+//        isTitleVisisble = true
+//        delay(500L)
+//
+//        val connectionResult = firebaseConnector.initializeAndSignIn()
+//        result = connectionResult
+//    }
+
     LaunchedEffect(Unit) {
-        isTitleVisisble = true
-        delay(500L) // Wait for title animation
+        delay(1000)
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
 
-        // --- CORE FIREBASE CONNECTION/AUTH ---
-        val connectionResult = firebaseConnector.initializeAndSignIn()
-        result = connectionResult
-        onConnectionResult(connectionResult) // Pass the crucial userId/ready state back
-    }
-
-    // 2. Navigate when the connection is successful and a minimum time has passed
-    LaunchedEffect(result) {
-        val currentResult = result
-        if (currentResult != null && currentResult.isReady && currentResult.userId != null) {
-            delay(500L) // Ensure smooth transition (minimum 2s total time)
-            navController.popBackStack()
-            navController.navigate(Screen.Dashboard.route)
+        if (uid != null) {
+            navController.navigate(Screen.Dashboard.route) {
+                popUpTo(0)
+            }
+        } else {
+//            navController.navigate(Screen.Login.route) {
+//                popUpTo(0)
+//            }
         }
     }
 
@@ -75,7 +77,6 @@ fun SplashScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Display progress or error state
         when {
             result?.error != null -> {
                 Text(
@@ -86,12 +87,11 @@ fun SplashScreen(
             }
 
             result == null || result?.isReady == false -> {
-                // Connecting
                 LinearProgressIndicator(
                     modifier = Modifier.width(128.dp), color = MaterialTheme.colorScheme.onPrimary
                 )
             }
-            // Ready, waiting for navigation delay
+
             else -> {
                 LinearProgressIndicator(
                     modifier = Modifier.width(128.dp),

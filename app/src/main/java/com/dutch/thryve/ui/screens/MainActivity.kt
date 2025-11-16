@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
-
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -38,7 +37,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.dutch.thryve.ThryveApplication.Companion.LOG_TAG
-import com.dutch.thryve.data.repository.FirebasePRRepositoryImpl
 import com.dutch.thryve.domain.model.ConnectionResult
 import com.dutch.thryve.ui.theme.ThryveTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -83,7 +81,7 @@ fun MainScreen() {
         val result = connectionResult
         if (result != null && result.isReady && result.userId != null) {
             // FIREBASE IS CONNECTED. Now create the data layer with the known userId.
-            val repository = FirebasePRRepositoryImpl()
+
 //            dailyViewModel = DailyViewModel(repository, result.userId)
         }
     }
@@ -100,9 +98,7 @@ fun MainScreen() {
         ) {
             composable(Screen.Splash.route) {
                 // The Splash screen performs the connection and updates the result state here
-                SplashScreen(navController) { result ->
-                    connectionResult = result
-                }
+                SplashScreen(navController)
             }
             composable(Screen.Dashboard.route) { DailyScreen(navController) }
             composable(Screen.PR.route) { PRScreen(navController) }
