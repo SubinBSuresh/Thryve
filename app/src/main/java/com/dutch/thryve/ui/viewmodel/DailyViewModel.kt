@@ -43,9 +43,19 @@ class DailyViewModel @Inject constructor(
         selectedDateFlow.flatMapLatest { date ->
             firebaseRepository.getMealLogsForDate(userId, date)
         }.onEach { logs ->
-            Log.i("dutch", "logs: $logs")
+            val totalCalories = logs.sumOf { it.calories }
+            val totalProtein = logs.sumOf { it.protein }
+            val totalCarbs = logs.sumOf { it.carbs }
+            val totalFat = logs.sumOf { it.fat }
+
             _uiState.update { currentState ->
-                currentState.copy(mealLogs = logs, totalCalories = logs.sumOf { it.calories })
+                val newSummary = currentState.dailySummary.copy(
+                    totalFoodCalories = totalCalories,
+                    currentProtein = totalProtein,
+                    currentCarbs = totalCarbs,
+                    currentFat = totalFat
+                )
+                currentState.copy(mealLogs = logs, dailySummary = newSummary)
             }
         }.launchIn(viewModelScope)
     }
