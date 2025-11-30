@@ -1,7 +1,6 @@
 package com.dutch.thryve.domain.repository
 
-import com.dutch.thryve.ui.screens.PersonalRecord
-import com.dutch.thryve.ui.viewmodel.PRViewModel
+import com.dutch.thryve.domain.model.PersonalRecord
 import kotlinx.coroutines.flow.Flow
 
 interface PRRepository {
