@@ -1,18 +1,18 @@
 package com.dutch.thryve.domain.model
 
-import java.time.LocalDate
+import com.google.firebase.Timestamp
+
 enum class MealType {
     BREAKFAST, LUNCH, DINNER, SNACK
 }
 data class MealLog(
     val id: String = "", // Used for Firestore/Database operations
     val userId: String = "",
-    val date: LocalDate,
+    val date: Timestamp = Timestamp.now(),
     val mealType: MealType? = null, // New field
-    val description: String,
-    val calories: Int,
-    val protein: Int, // grams
-    val fat: Int,     // grams
-    val carbs: Int    // grams
+    val description: String = "",
+    val calories: Int = 0,
+    val protein: Int = 0, // grams
+    val fat: Int = 0,     // grams
+    val carbs: Int = 0    // grams
 )
-

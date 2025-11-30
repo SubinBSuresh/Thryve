@@ -2,11 +2,13 @@ package com.dutch.thryve.ai
 
 import com.dutch.thryve.BuildConfig
 import com.dutch.thryve.domain.model.MealLog
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
@@ -17,7 +19,7 @@ import java.util.UUID
 
 
 private const val API_KEY = BuildConfig.GEMINI_API_KEY
-private const val GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025"
+private const val GEMINI_MODEL = "gemini-1.5-flash-preview-0514"
 private const val API_URL = "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent?key=$API_KEY"
 
 // --- @SERIALIZABLE DATA CLASSES FOR API REQUEST PAYLOAD ---
@@ -172,11 +174,12 @@ class GeminiService @Inject constructor() {
 
             // 3. Parse the structured JSON response into our final AnalysisResult object
             val analysisResult = json.decodeFromString<AnalysisResult>(jsonText)
+            val timestamp = Timestamp(date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
 
             MealLog(
                 id = UUID.randomUUID().toString(),
                 userId = "", // Will be set by the ViewModel
-                date = date,
+                date = timestamp,
                 description = analysisResult.description,
                 calories = analysisResult.calories,
                 protein = analysisResult.protein,

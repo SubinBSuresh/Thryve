@@ -5,9 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dutch.thryve.ai.GeminiService
 import com.dutch.thryve.domain.model.DailySummary
-import com.dutch.thryve.domain.model.DailySummary.Companion.empty
 import com.dutch.thryve.domain.model.MealLog
+import com.dutch.thryve.data.repository.FirebaseRepositoryImpl
 import com.dutch.thryve.data.repository.TrackerRepositoryImpl
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,32 +22,36 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
-
-private const val CURRENT_USER_ID = "mock_user123"
-
 @HiltViewModel
-class DailyViewModel @Inject constructor(private val repository: TrackerRepositoryImpl, private val geminiService: GeminiService) : ViewModel() {
+class DailyViewModel @Inject constructor(
+    private val trackerRepository: TrackerRepositoryImpl,
+    private val firebaseRepository: FirebaseRepositoryImpl,
+    private val geminiService: GeminiService
+) : ViewModel() {
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
+
+    private val auth = FirebaseAuth.getInstance()
 
     private val selectedDateFlow = _uiState.map { it.selectedDate }.distinctUntilChanged()
 
     private fun collectMealLogs() {
+        val userId = auth.currentUser?.uid ?: return
         selectedDateFlow.flatMapLatest { date ->
-            repository.getLogsForDate(CURRENT_USER_ID, date)
+            firebaseRepository.getMealLogsForDate(userId, date)
         }.onEach { logs ->
+            Log.i("dutch", "logs: $logs")
             _uiState.update { currentState ->
-                currentState.copy(
-                    mealLogs = logs, totalCalories = logs.sumOf { it.calories })
+                currentState.copy(mealLogs = logs, totalCalories = logs.sumOf { it.calories })
             }
         }.launchIn(viewModelScope)
     }
 
     init {
         collectMealLogs()
-
     }
 
     fun updateMealInputText(text: String) {
@@ -56,17 +62,40 @@ class DailyViewModel @Inject constructor(private val repository: TrackerReposito
         _uiState.update { it.copy(selectedDate = date) }
     }
 
-
     fun logMeal(mealDescription: String) {
+        val userId = auth.currentUser?.uid ?: return
+        if (mealDescription.isBlank()) return
+
         viewModelScope.launch {
-            // ... (Error handling, state updates)
-            val mealLog = geminiService.analyzeMeal(mealDescription, CalendarUiState().selectedDate)
-            Log.i("dutch", "mealLog : ${mealLog?.calories}")
-            // ... (Save mealLog to repository if successful)
+            _uiState.update {
+                it.copy(isAwaitingAi = true, showInputDialog = false, mealInputText = "")
+            }
+
+            try {
+                val date = uiState.value.selectedDate
+                val mealLog = geminiService.analyzeMeal(mealDescription, date)
+
+                if (mealLog != null) {
+                    firebaseRepository.saveMealLog(mealLog.copy(userId = userId), userId)
+                } else {
+                    _uiState.update { it.copy(error = "Could not analyze meal. Please try again.") }
+                }
+
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message ?: "An error occurred.") }
+                Log.e("dutch", "Error analyzing meal", e)
+            } finally {
+                _uiState.update { it.copy(isAwaitingAi = false) }
+            }
         }
     }
-    fun toggleInputDialog(toggle: Boolean) {
 
+    fun toggleInputDialog(show: Boolean) {
+        _uiState.update { it.copy(showInputDialog = show) }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 }
 
@@ -78,5 +107,5 @@ data class CalendarUiState(
     val showInputDialog: Boolean = false,
     val isAwaitingAi: Boolean = false,
     val error: String? = null,
-    val dailySummary: DailySummary = empty(selectedDate, 4000)
+    val dailySummary: DailySummary = DailySummary.empty(selectedDate, 4000)
 )

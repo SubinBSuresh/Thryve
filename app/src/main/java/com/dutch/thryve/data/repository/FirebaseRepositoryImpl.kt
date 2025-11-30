@@ -1,5 +1,7 @@
 package com.dutch.thryve.data.repository
 
+import android.util.Log
+import com.dutch.thryve.domain.model.MealLog
 import com.dutch.thryve.domain.model.PersonalRecord
 import com.dutch.thryve.domain.repository.FirebaseRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -10,6 +12,8 @@ import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -77,6 +81,59 @@ class FirebaseRepositoryImpl @Inject constructor(
         db.collection("users").document(userId).collection("personal_records").document(record.id)
             .delete()
             .await()
+    }
+
+    override suspend fun saveMealLog(mealLog: MealLog, userId: String) {
+        db.collection("users").document(userId).collection("meal_logs").add(mealLog).await()
+    }
+
+    override fun getMealLogsForDate(userId: String, date: LocalDate): Flow<List<MealLog>> {
+        Log.i("dutch", "getMealLogsForDate called with userId: $userId, date: $date")
+
+        return db.collection("users").document(userId).collection("meal_logs")
+            .whereEqualTo("date.year", date.year)
+            .whereEqualTo("date.monthValue", date.monthValue)
+            .whereEqualTo("date.dayOfMonth", date.dayOfMonth)
+            .snapshots()
+            .map { querySnapshot ->
+                Log.i("dutch", "Query returned ${querySnapshot.size()} documents.")
+                querySnapshot.documents.mapNotNull { document ->
+                    try {
+                        Log.i("dutch", "Processing document: ${document.id} => ${document.data}")
+
+                        val dateObject = document.get("date")
+                        val timestamp = when (dateObject) {
+                            is Timestamp -> dateObject
+                            is Map<*, *> -> {
+                                val year = (dateObject["year"] as? Long)?.toInt() ?: 1970
+                                val month = (dateObject["monthValue"] as? Long)?.toInt() ?: 1
+                                val day = (dateObject["dayOfMonth"] as? Long)?.toInt() ?: 1
+                                val localDate = LocalDate.of(year, month, day)
+                                Timestamp(localDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
+                            }
+                            else -> {
+                                Log.w("dutch", "Unknown date format for document ${document.id}: $dateObject")
+                                Timestamp.now()
+                            }
+                        }
+
+                        MealLog(
+                            id = document.id,
+                            userId = document.getString("userId") ?: "",
+                            date = timestamp,
+                            description = document.getString("description") ?: "",
+                            calories = document.getLong("calories")?.toInt() ?: 0,
+                            protein = document.getLong("protein")?.toInt() ?: 0,
+                            fat = document.getLong("fat")?.toInt() ?: 0,
+                            carbs = document.getLong("carbs")?.toInt() ?: 0,
+                            mealType = document.getString("mealType")?.let { com.dutch.thryve.domain.model.MealType.valueOf(it) }
+                        )
+                    } catch (e: Exception) {
+                        Log.e("dutch", "Failed to parse document ${document.id}", e)
+                        null
+                    }
+                }
+            }
     }
 
     override suspend fun initializeFirebase() {

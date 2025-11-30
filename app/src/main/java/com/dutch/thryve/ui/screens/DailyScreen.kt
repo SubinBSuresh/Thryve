@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -105,13 +104,13 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Top Date Selector (similar to 20% area, but simplified visuals to match image)
+            // Top Date Selector
             DateSelectorRow(
                 selectedDate = uiState.selectedDate,
                 onDateSelected = viewModel::updateSelectedDate
             )
 
-            // Main Content Area (80% area, adapted to the card layout)
+            // Main Content Area
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -119,14 +118,9 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Calories Card
                 CaloriesCard(uiState.dailySummary)
-                viewModel.logMeal("10boiled eggs, 2 scoops of whey mixed with water, one scoop oats")
-
-                // Macros Card
                 MacrosCard(uiState.dailySummary)
 
-                // Meal List (if any meals are logged) or AI indicator
                 AnimatedContent(
                     targetState = uiState.isAwaitingAi,
                     transitionSpec = {
@@ -139,9 +133,7 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                     } else if (uiState.mealLogs.isNotEmpty()) {
                         MealLogList(uiState.mealLogs, modifier = Modifier.weight(1f))
                     } else {
-                        // Optional: Show an empty state message if no meals and not processing
-                        // EmptyLogMessage(uiState.selectedDate, modifier = Modifier.weight(1f))
-                        Spacer(Modifier.weight(1f)) // Just fill space if nothing to show
+                        Spacer(Modifier.weight(1f)) // Fill space if nothing to show
                     }
                 }
             }
@@ -157,16 +149,15 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
             )
         }
 
-        // Error Snackbar (optional, but good for user feedback)
+        // Error Snackbar
         uiState.error?.let { errorMessage ->
             Snackbar(
                 modifier = Modifier
                     .padding(16.dp)
                     .fillMaxWidth()
             ) { Text(errorMessage) }
-            // Once shown, clear the error
             LaunchedEffect(errorMessage) {
-//                viewModel.clearError()
+                viewModel.clearError()
             }
         }
     }
@@ -180,17 +171,15 @@ fun DateSelectorRow(
     val coroutineScope = rememberCoroutineScope()
     val today = LocalDate.now()
     val dates = remember {
-        (-7..7).map { today.plusDays(it.toLong()) } // Last 7 days, today, next 7 days
+        (-7..7).map { today.plusDays(it.toLong()) } // Show a range of dates
     }
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
-        // Scroll to today's date on initial composition
         val todayIndex = dates.indexOf(today)
         if (todayIndex != -1) {
             coroutineScope.launch {
-                // Scroll to center today, or adjust as needed
-                listState.scrollToItem(todayIndex - 2) // Show a few days before today
+                listState.scrollToItem(todayIndex - 2) // Center today's date
             }
         }
     }
@@ -252,139 +241,6 @@ fun DateSelectionCard(
     }
 }
 
-
-@Composable
-fun DailyLogContent(uiState: CalendarUiState) {
-//    TODO("Not yet implemented")
-}
-
-@Composable
-fun DateSummaryRow(
-    selectionDate: LocalDate, onDateSelected: (LocalDate) -> Unit
-) {
-
-
-    val coroutineScope = rememberCoroutineScope()
-
-
-    val today = LocalDate.now()
-    val startDay = today.minusDays(7)
-    val dates = (0L..14L).map { startDay.plusDays(it) }
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(Unit) {
-        val todayIndex = dates.indexOf(today)
-        if (todayIndex != -1) {
-            coroutineScope.launch {
-                listState.scrollToItem(todayIndex - 2)
-            }
-        }
-    }
-
-    LazyRow(
-        state = listState,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-
-
-        items(dates) { date ->
-            DateCard(
-                date = date, isSelected = date == selectionDate, onDateSelected = onDateSelected
-            )
-
-        }
-    }
-}
-
-
-@Composable
-fun DateCard(date: LocalDate, isSelected: Boolean, onDateSelected: (LocalDate) -> Unit) {
-    val isToday = date == LocalDate.now()
-    val backgroundColor = when {
-        isSelected -> MaterialTheme.colorScheme.primary
-        isToday -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-
-    val contentColor = when {
-        isSelected -> MaterialTheme.colorScheme.onPrimary
-        isToday -> MaterialTheme.colorScheme.onPrimaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        modifier = Modifier
-            .width(80.dp)
-            .height(100.dp)
-            .clickable { onDateSelected(date) }) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = date.dayOfWeek.getDisplayName(
-                    TextStyle.SHORT, Locale.getDefault()
-                ), color = contentColor.copy(alpha = 0.8f)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = contentColor
-            )
-
-            Text(
-                text = date.month.getDisplayName(
-                    TextStyle.SHORT, Locale.getDefault(),
-                ),
-                style = MaterialTheme.typography.labelSmall,
-                color = contentColor.copy(alpha = 0.8f)
-            )
-        }
-    }
-}
-
-
-@Composable
-fun MacroSummaryHeader(selectionDate: LocalDate, totalCalories: Int) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = "Activity log for ",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Filled.Place,
-                contentDescription = "total calories",
-                tint = MaterialTheme.colorScheme.error
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "**$totalCalories** kcal logged",
-                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold),
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-    }
-}
-
-
 @Composable
 fun CaloriesCard(dailySummary: DailySummary) {
 
@@ -403,9 +259,7 @@ fun CaloriesCard(dailySummary: DailySummary) {
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(24.dp)
                 )
-
                 Spacer(Modifier.width(9.dp))
-
                 Text(
                     text = "Calories",
                     style = MaterialTheme.typography.titleMedium,
@@ -413,9 +267,7 @@ fun CaloriesCard(dailySummary: DailySummary) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-
             Spacer(Modifier.height(16.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround,
@@ -433,7 +285,7 @@ fun CaloriesCard(dailySummary: DailySummary) {
                         .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
                 )
                 CalorieStat(
-                    value = dailySummary.totalExerciseCalories.toString(), // Mocked as 0 for now
+                    value = dailySummary.totalExerciseCalories.toString(),
                     label = "Exercise",
                     color = MaterialTheme.colorScheme.tertiary
                 )
@@ -462,7 +314,6 @@ fun CalorieStat(value: String, label: String, color: Color) {
             text = value,
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold)
         )
-
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
@@ -484,7 +335,7 @@ fun MacrosCard(dailySummary: DailySummary) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Filled.PieChart, // Using fitness icon for macros
+                    imageVector = Icons.Filled.PieChart,
                     contentDescription = "Macros",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
@@ -575,7 +426,6 @@ fun AiProcessingIndicator(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-//        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Analyzing meal with Gemini AI...",
@@ -638,8 +488,7 @@ fun MealLogCard(log: MealLog) {
 @Composable
 fun MacroStat(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
+        Text(text = value,
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Black),
             color = color
         )
@@ -702,11 +551,3 @@ fun LogMealDialog(
         }
     }
 }
-
-
-
-
-
-
-
-
