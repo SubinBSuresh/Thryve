@@ -7,5 +7,6 @@ interface FirebaseRepository {
     fun getPersonalRecords(userId: String): Flow<List<PersonalRecord>>
     suspend fun savePersonalRecord(record: PersonalRecord, userId: String)
     suspend fun updatePersonalRecord(record: PersonalRecord, userId: String)
+    suspend fun deletePersonalRecord(record: PersonalRecord, userId: String)
     suspend fun initializeFirebase()
 }

@@ -72,5 +72,14 @@ class FirebaseViewModel @Inject constructor(private val repository: FirebaseRepo
             repository.updatePersonalRecord(record, userId)
         }
     }
+
+    fun deletePersonalRecord(record: PersonalRecord) {
+        val userId = auth.currentUser?.uid
+        if (userId == null) return
+
+        viewModelScope.launch {
+            repository.deletePersonalRecord(record, userId)
+        }
+    }
 }
 

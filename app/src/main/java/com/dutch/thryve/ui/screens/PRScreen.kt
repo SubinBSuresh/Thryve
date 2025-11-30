@@ -17,10 +17,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,7 +61,13 @@ import java.util.Locale
 
 
 @Composable
-fun RankedPRListItem(record: PersonalRecord, rank: Int, onEditClick: () -> Unit) {
+fun RankedPRListItem(
+    record: PersonalRecord,
+    rank: Int,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
     val (medalColor, textStyle) = when (rank) {
         1 -> Pair(Color(0xFFFFD700), MaterialTheme.typography.titleSmall)
         2 -> Pair(Color(0xFFC0C0C0), MaterialTheme.typography.bodyMedium)
@@ -102,13 +111,21 @@ fun RankedPRListItem(record: PersonalRecord, rank: Int, onEditClick: () -> Unit)
             )
         }
 
-        if (rank == 1) { // Show edit button only for the top PR
-            IconButton(onClick = onEditClick) {
-                Icon(
-                    Icons.Outlined.Edit,
-                    contentDescription = "Edit PR",
-                    modifier = Modifier.size(18.dp)
-                )
+        if (rank == 1) { // Show actions only for the top PR
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "More actions")
+                }
+                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    DropdownMenuItem(text = { Text("Edit") }, onClick = {
+                        onEditClick()
+                        showMenu = false
+                    })
+                    DropdownMenuItem(text = { Text("Delete") }, onClick = {
+                        onDeleteClick()
+                        showMenu = false
+                    })
+                }
             }
         }
     }
@@ -117,7 +134,10 @@ fun RankedPRListItem(record: PersonalRecord, rank: Int, onEditClick: () -> Unit)
 
 @Composable
 fun ExercisePRsItem(
-    exerciseName: String, records: List<PersonalRecord>, onEditRecord: (PersonalRecord) -> Unit
+    exerciseName: String,
+    records: List<PersonalRecord>,
+    onEditRecord: (PersonalRecord) -> Unit,
+    onDeleteRecord: (PersonalRecord) -> Unit
 ) {
     ElevatedCard(
         modifier = Modifier
@@ -132,8 +152,10 @@ fun ExercisePRsItem(
                 modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
             )
             records.forEachIndexed { index, record ->
-                RankedPRListItem(
-                    record = record, rank = index + 1, onEditClick = { onEditRecord(record) })
+                RankedPRListItem(record = record,
+                    rank = index + 1,
+                    onEditClick = { onEditRecord(record) },
+                    onDeleteClick = { onDeleteRecord(record) })
             }
         }
     }
@@ -278,6 +300,30 @@ fun ProgressReportDialog(
     })
 }
 
+@Composable
+fun DeleteConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirm Deletion") },
+        text = { Text("Are you sure you want to delete this personal record?") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -293,8 +339,10 @@ fun PRScreen(
         }.entries.sortedBy { it.key } // Sort exercises alphabetically
     }
 
-    var showDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     var recordToEdit by remember { mutableStateOf<PersonalRecord?>(null) }
+    var recordToDelete by remember { mutableStateOf<PersonalRecord?>(null) }
 
     Scaffold(topBar = {
         TopAppBar(title = { Text("Personal Records") })
@@ -302,7 +350,7 @@ fun PRScreen(
         FloatingActionButton(
             onClick = { // For adding a new PR
                 recordToEdit = null
-                showDialog = true
+                showEditDialog = true
             }, containerColor = MaterialTheme.colorScheme.primary, shape = CircleShape
         ) {
             Icon(Icons.Filled.Add, contentDescription = "Add New PR")
@@ -332,18 +380,23 @@ fun PRScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(groupedPRs) { (exerciseName, records) ->
-                    ExercisePRsItem(exerciseName = exerciseName, records = records, onEditRecord = {
-                        recordToEdit = it
-                        showDialog = true
-                    })
+                    ExercisePRsItem(exerciseName = exerciseName,
+                        records = records,
+                        onEditRecord = {
+                            recordToEdit = it
+                            showEditDialog = true
+                        },
+                        onDeleteRecord = {
+                            recordToDelete = it
+                            showDeleteDialog = true
+                        })
                 }
             }
         }
 
-        if (showDialog) {
-            ProgressReportDialog(
-                recordToEdit = recordToEdit,
-                onDismissRequest = { showDialog = false },
+        if (showEditDialog) {
+            ProgressReportDialog(recordToEdit = recordToEdit,
+                onDismissRequest = { showEditDialog = false },
                 onSave = { name, weight, reps ->
                     if (recordToEdit == null) {
                         // Create new record
@@ -353,8 +406,15 @@ fun PRScreen(
                         val updatedRecord = recordToEdit!!.copy(weight = weight, reps = reps)
                         firebaseViewModel.updatePersonalRecord(updatedRecord)
                     }
-                    showDialog = false
+                    showEditDialog = false
                 })
+        }
+
+        if (showDeleteDialog) {
+            DeleteConfirmationDialog(onConfirm = {
+                recordToDelete?.let { firebaseViewModel.deletePersonalRecord(it) }
+                showDeleteDialog = false
+            }, onDismiss = { showDeleteDialog = false })
         }
     })
 }

@@ -1,5 +1,6 @@
 package com.dutch.thryve.ai
 
+import com.dutch.thryve.BuildConfig
 import com.dutch.thryve.domain.model.MealLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,7 +16,7 @@ import java.net.URL
 import java.util.UUID
 
 
-private const val API_KEY = "AIzaSyAWPzZslcE6GWAF3PqcvlJfGMxZqBOsFkQ"
+private const val API_KEY = BuildConfig.GEMINI_API_KEY
 private const val GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025"
 private const val API_URL = "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent?key=$API_KEY"
 

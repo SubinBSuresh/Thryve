@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.dutch.thryve.BuildConfig
 import com.dutch.thryve.ui.viewmodel.FirebaseViewModel
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
@@ -43,9 +44,9 @@ fun SplashScreen(
 
         if (currentUser == null) {
             try {
-                // Using test credentials for now
-                val testEmail = "subin.sureshvs@gmail.com"
-                val testPassword = "GhostofT@27"
+                // Using test credentials from BuildConfig
+                val testEmail = BuildConfig.TEST_EMAIL
+                val testPassword = BuildConfig.TEST_PASSWORD
                 auth.signInWithEmailAndPassword(testEmail, testPassword).await()
                 currentUser = auth.currentUser
             } catch (e: Exception) {

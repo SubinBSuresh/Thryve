@@ -72,6 +72,13 @@ class FirebaseRepositoryImpl @Inject constructor(
             .await()
     }
 
+    override suspend fun deletePersonalRecord(record: PersonalRecord, userId: String) {
+        if (record.id.isBlank()) return
+        db.collection("users").document(userId).collection("personal_records").document(record.id)
+            .delete()
+            .await()
+    }
+
     override suspend fun initializeFirebase() {
         TODO("Not yet implemented")
     }
