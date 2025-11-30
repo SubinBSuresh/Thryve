@@ -19,50 +19,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.dutch.thryve.BuildConfig
-import com.dutch.thryve.ui.viewmodel.FirebaseViewModel
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.tasks.await
 
 @Composable
-fun SplashScreen(
-    navController: NavHostController, viewModel: FirebaseViewModel = hiltViewModel()
-) {
+fun SplashScreen(navController: NavHostController) {
     val TAG = "Dutch__SplashScreen"
     var isTitleVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         isTitleVisible = true
-        delay(2000) // Keep splash visible for 2 seconds to allow animation to finish
+        delay(2000) // Keep splash visible for 2 seconds
 
         val auth = FirebaseAuth.getInstance()
-        var currentUser = auth.currentUser
-
-        if (currentUser == null) {
-            try {
-                // Using test credentials from BuildConfig
-                val testEmail = BuildConfig.TEST_EMAIL
-                val testPassword = BuildConfig.TEST_PASSWORD
-                auth.signInWithEmailAndPassword(testEmail, testPassword).await()
-                currentUser = auth.currentUser
-            } catch (e: Exception) {
-                Log.e(TAG, "Sign-in failed", e)
-                return@LaunchedEffect
-            }
-        }
+        val currentUser = auth.currentUser
 
         if (currentUser != null) {
-            navController.navigate(Screen.Dashboard.route) {
-                popUpTo(0)
+            // User is already logged in, navigate to Nutrition
+            Log.i(TAG, "User already logged in: ${currentUser.uid}")
+            navController.navigate(Screen.Nutrition.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
             }
         } else {
-//            navController.navigate(Screen.Login.route) {
-//                popUpTo(0)
-//            }
+            // No user is logged in, navigate to Login
+            Log.i(TAG, "No user logged in, navigating to LoginScreen")
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+            }
         }
     }
 
@@ -79,7 +65,10 @@ fun SplashScreen(
             exit = fadeOut()
         ) {
             Text(
-                text = "THRYVE", fontSize = 48.sp, color = MaterialTheme.colorScheme.onPrimary
+                text = "THRYVE",
+                fontSize = 56.sp,
+                color = MaterialTheme.colorScheme.onPrimary,
+                fontWeight = FontWeight.Bold
             )
         }
     }

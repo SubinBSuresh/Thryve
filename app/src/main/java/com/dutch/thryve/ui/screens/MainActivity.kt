@@ -10,8 +10,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.LocalDining
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -19,14 +22,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -37,8 +38,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.dutch.thryve.ThryveApplication.Companion.LOG_TAG
-import com.dutch.thryve.domain.model.ConnectionResult
 import com.dutch.thryve.ui.theme.ThryveTheme
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -59,35 +60,42 @@ class MainActivity : ComponentActivity() {
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Splash : Screen("splash", "Splash", Icons.Default.Home)
+    object Login : Screen("login", "Login", Icons.Default.AccountCircle)
+    object Signup : Screen("signup", "Signup", Icons.Default.AccountCircle)
     object Dashboard : Screen("dashboard", "Dashboard", Icons.Default.Home)
     object Activity : Screen("activity", "Activity", Icons.Default.Person)
-    object Nutrition : Screen("nutrition", "Nutrition", Icons.Default.Star)
+    object Nutrition : Screen("nutrition", "Nutrition", Icons.Default.LocalDining)
     object Progress : Screen("progress", "Progress", Icons.Default.KeyboardArrowUp)
     object Settings : Screen("settings", "Settings", Icons.Default.Settings)
-    object PR : Screen("pr", "PR", Icons.Default.Star)
+    object PR : Screen("pr", "PR", Icons.Default.EmojiEvents)
 }
 
-val bottomNavItems = listOf(Screen.Dashboard, Screen.PR)
+val bottomNavItems = listOf(Screen.Nutrition, Screen.PR)
 
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    var connectionResult by remember { mutableStateOf<ConnectionResult?>(null) }
+    val nonAuthRoutes = listOf(Screen.Splash.route, Screen.Login.route, Screen.Signup.route)
 
-    // When a connection result comes in, if successful, create the ViewModel
-    LaunchedEffect(connectionResult) {
-        val result = connectionResult
-        if (result != null && result.isReady && result.userId != null) {
-            // FIREBASE IS CONNECTED. Now create the data layer with the known userId.
-
-//            dailyViewModel = DailyViewModel(repository, result.userId)
+    // Listen for auth state changes
+    DisposableEffect(Unit) {
+        val listener = FirebaseAuth.AuthStateListener { auth ->
+            if (auth.currentUser == null && currentRoute !in nonAuthRoutes) {
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                }
+            }
+        }
+        FirebaseAuth.getInstance().addAuthStateListener(listener)
+        onDispose {
+            FirebaseAuth.getInstance().removeAuthStateListener(listener)
         }
     }
 
     Scaffold(bottomBar = {
-        if (currentRoute != Screen.Splash.route) {
+        if (currentRoute !in nonAuthRoutes) {
             ThryveBottomBar(navController = navController, currentRoute = currentRoute)
         }
     }) { innerPadding ->
@@ -97,10 +105,15 @@ fun MainScreen() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Splash.route) {
-                // The Splash screen performs the connection and updates the result state here
                 SplashScreen(navController)
             }
-            composable(Screen.Dashboard.route) { DailyScreen(navController) }
+            composable(Screen.Login.route) {
+                LoginScreen(navController)
+            }
+            composable(Screen.Signup.route) {
+                SignupScreen(navController)
+            }
+            composable(Screen.Nutrition.route) { DailyScreen(navController) }
             composable(Screen.PR.route) { PRScreen(navController) }
         }
     }
@@ -110,23 +123,31 @@ fun MainScreen() {
 fun ThryveBottomBar(navController: NavHostController, currentRoute: String?) {
     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
         bottomNavItems.forEach { screen ->
-            val selectedScreen = currentRoute == screen.route
+            val selected = currentRoute == screen.route
             NavigationBarItem(
                 icon = { Icon(screen.icon, contentDescription = screen.label) },
                 label = { Text(screen.label) },
-                selected = selectedScreen,
+                selected = selected,
                 onClick = {
                     if (currentRoute != screen.route) {
                         navController.navigate(screen.route) {
-                            popUpTo(Screen.Dashboard.route) {
+                            popUpTo(Screen.Nutrition.route) { // This should be the start destination of your bottom nav graph
                                 saveState = true
-                                inclusive = false
+                                inclusive = true
                             }
                             launchSingleTop = true
                             restoreState = true
                         }
                     }
-                })
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
         }
     }
 }

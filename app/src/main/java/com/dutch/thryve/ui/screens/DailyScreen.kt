@@ -28,6 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
@@ -90,7 +92,7 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                     onClick = { viewModel.toggleInputDialog(true) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = CircleShape
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Icon(Icons.Filled.Add, "Log Meal")
                 }
@@ -396,7 +398,7 @@ fun CaloriesCard(dailySummary: DailySummary) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Filled.ShoppingCart,
+                    imageVector = Icons.Filled.LocalFireDepartment,
                     contentDescription = "Calories",
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(24.dp)
@@ -482,7 +484,7 @@ fun MacrosCard(dailySummary: DailySummary) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Filled.Place, // Using fitness icon for macros
+                    imageVector = Icons.Filled.PieChart, // Using fitness icon for macros
                     contentDescription = "Macros",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)

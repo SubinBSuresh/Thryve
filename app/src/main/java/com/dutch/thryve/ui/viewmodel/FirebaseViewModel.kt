@@ -81,5 +81,9 @@ class FirebaseViewModel @Inject constructor(private val repository: FirebaseRepo
             repository.deletePersonalRecord(record, userId)
         }
     }
+
+    fun logout() {
+        auth.signOut()
+    }
 }
 

@@ -10,17 +10,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -32,12 +32,12 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -62,17 +62,14 @@ import java.util.Locale
 
 @Composable
 fun RankedPRListItem(
-    record: PersonalRecord,
-    rank: Int,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    record: PersonalRecord, rank: Int, onEditClick: () -> Unit, onDeleteClick: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val (medalColor, textStyle) = when (rank) {
-        1 -> Pair(Color(0xFFFFD700), MaterialTheme.typography.titleSmall)
-        2 -> Pair(Color(0xFFC0C0C0), MaterialTheme.typography.bodyMedium)
-        3 -> Pair(Color(0xFFCD7F32), MaterialTheme.typography.bodySmall)
-        else -> Pair(Color.Transparent, MaterialTheme.typography.bodyLarge)
+        1 -> Pair(Color(0xFFFFD700), typography.titleSmall)
+        2 -> Pair(Color(0xFFC0C0C0), typography.bodyMedium)
+        3 -> Pair(Color(0xFFCD7F32), typography.bodySmall)
+        else -> Pair(Color.Transparent, typography.bodyLarge)
     }
 
     val formattedDate = remember(record.date) {
@@ -87,7 +84,7 @@ fun RankedPRListItem(
     ) {
         if (rank in 1..3) {
             Icon(
-                imageVector = Icons.Outlined.Star,
+                imageVector = Icons.Outlined.EmojiEvents,
                 contentDescription = "Medal",
                 tint = medalColor,
                 modifier = Modifier.size(if (rank == 1) 20.dp else 16.dp)
@@ -102,12 +99,12 @@ fun RankedPRListItem(
             Text(
                 text = "${record.weight} kg x ${record.reps} reps",
                 style = textStyle,
-                color = if (rank == 1) MaterialTheme.colorScheme.primary else Color.Unspecified
+                color = if (rank == 1) colorScheme.primary else Color.Unspecified
             )
             Text(
                 text = formattedDate,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = typography.bodySmall,
+                color = colorScheme.onSurfaceVariant
             )
         }
 
@@ -147,12 +144,13 @@ fun ExercisePRsItem(
         Column(modifier = Modifier.padding(vertical = 8.dp)) {
             Text(
                 text = exerciseName,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = typography.titleMedium,
+                color = colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
             )
             records.forEachIndexed { index, record ->
-                RankedPRListItem(record = record,
+                RankedPRListItem(
+                    record = record,
                     rank = index + 1,
                     onEditClick = { onEditRecord(record) },
                     onDeleteClick = { onDeleteRecord(record) })
@@ -277,9 +275,7 @@ fun ProgressReportDialog(
                 Text(
                     text = "Date: ${
                         LocalDate.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))
-                    }",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 8.dp)
+                    }", style = typography.bodySmall, modifier = Modifier.padding(top = 8.dp)
                 )
             }
         }
@@ -302,8 +298,7 @@ fun ProgressReportDialog(
 
 @Composable
 fun DeleteConfirmationDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onConfirm: () -> Unit, onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -320,8 +315,7 @@ fun DeleteConfirmationDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
-    )
+        })
 }
 
 
@@ -344,77 +338,92 @@ fun PRScreen(
     var recordToEdit by remember { mutableStateOf<PersonalRecord?>(null) }
     var recordToDelete by remember { mutableStateOf<PersonalRecord?>(null) }
 
-    Scaffold(topBar = {
-        TopAppBar(title = { Text("Personal Records") })
-    }, floatingActionButton = {
-        FloatingActionButton(
-            onClick = { // For adding a new PR
-                recordToEdit = null
-                showEditDialog = true
-            }, containerColor = MaterialTheme.colorScheme.primary, shape = CircleShape
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = "Add New PR")
-        }
-    }, content = { paddingValues ->
-        if (prList.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { // For adding a new PR
+                    recordToEdit = null
+                    showEditDialog = true
+                }, containerColor = colorScheme.primary, shape = RoundedCornerShape(16.dp)
             ) {
-                Text(
-                    "No PRs logged yet. Tap '+' to add one.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Icon(Icons.Filled.Add, contentDescription = "Add New PR")
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(
-                    top = paddingValues.calculateTopPadding(),
-                    bottom = paddingValues.calculateBottomPadding() + 96.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(groupedPRs) { (exerciseName, records) ->
-                    ExercisePRsItem(exerciseName = exerciseName,
-                        records = records,
-                        onEditRecord = {
-                            recordToEdit = it
-                            showEditDialog = true
-                        },
-                        onDeleteRecord = {
-                            recordToDelete = it
-                            showDeleteDialog = true
-                        })
+        }, content = { innerPadding ->
+
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Custom Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Personal Records",
+                        style = typography.titleMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { firebaseViewModel.logout() }) {
+                        Icon(Icons.Filled.Logout, contentDescription = "Logout")
+                    }
+                }
+
+                if (prList.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No PRs logged yet. Tap '+' to add one.", color = colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        contentPadding = innerPadding,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(groupedPRs) { (exerciseName, records) ->
+                            ExercisePRsItem(exerciseName = exerciseName,
+                                records = records,
+                                onEditRecord = {
+                                    recordToEdit = it
+                                    showEditDialog = true
+                                },
+                                onDeleteRecord = {
+                                    recordToDelete = it
+                                    showDeleteDialog = true
+                                })
+                        }
+                    }
                 }
             }
-        }
 
-        if (showEditDialog) {
-            ProgressReportDialog(recordToEdit = recordToEdit,
-                onDismissRequest = { showEditDialog = false },
-                onSave = { name, weight, reps ->
-                    if (recordToEdit == null) {
-                        // Create new record
-                        firebaseViewModel.logPersonalRecord(name, weight, reps, LocalDate.now())
-                    } else {
-                        // Update existing record
-                        val updatedRecord = recordToEdit!!.copy(weight = weight, reps = reps)
-                        firebaseViewModel.updatePersonalRecord(updatedRecord)
-                    }
-                    showEditDialog = false
-                })
-        }
+            if (showEditDialog) {
+                ProgressReportDialog(recordToEdit = recordToEdit,
+                    onDismissRequest = { showEditDialog = false },
+                    onSave = { name, weight, reps ->
+                        if (recordToEdit == null) {
+                            // Create new record
+                            firebaseViewModel.logPersonalRecord(name, weight, reps, LocalDate.now())
+                        } else {
+                            // Update existing record
+                            val updatedRecord = recordToEdit!!.copy(weight = weight, reps = reps)
+                            firebaseViewModel.updatePersonalRecord(updatedRecord)
+                        }
+                        showEditDialog = false
+                    })
+            }
 
-        if (showDeleteDialog) {
-            DeleteConfirmationDialog(onConfirm = {
-                recordToDelete?.let { firebaseViewModel.deletePersonalRecord(it) }
-                showDeleteDialog = false
-            }, onDismiss = { showDeleteDialog = false })
-        }
-    })
+            if (showDeleteDialog) {
+                DeleteConfirmationDialog(onConfirm = {
+                    recordToDelete?.let { firebaseViewModel.deletePersonalRecord(it) }
+                    showDeleteDialog = false
+                }, onDismiss = { showDeleteDialog = false })
+            }
+        })
 }

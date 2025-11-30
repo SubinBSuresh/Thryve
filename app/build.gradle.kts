@@ -40,7 +40,12 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            //strip unused code
+            isMinifyEnabled = true
+
+            //strip unused resources
+            isShrinkResources = true
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
@@ -100,5 +105,5 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     //icons
-//    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.material.icons.extended)
 }
