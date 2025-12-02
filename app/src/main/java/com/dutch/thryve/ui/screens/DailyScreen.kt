@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -60,6 +61,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -258,7 +260,7 @@ fun CaloriesCard(dailySummary: DailySummary) {
             containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
         )
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Filled.LocalFireDepartment,
@@ -273,8 +275,24 @@ fun CaloriesCard(dailySummary: DailySummary) {
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                Spacer(modifier = Modifier.weight(1f))
+                if (dailySummary.remainingCalories < 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(4.dp)
+                            .clip(CircleShape)
+                            .background(Color.Red)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(4.dp)
+                            .clip(CircleShape)
+                            .background(Color.Green)
+                    )
+                }
             }
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround,
@@ -336,7 +354,7 @@ fun MacrosCard(dailySummary: DailySummary) {
             containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
         )
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Filled.PieChart,
@@ -352,20 +370,18 @@ fun MacrosCard(dailySummary: DailySummary) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 MacroGoalStat(
-                    label = "Protein (g)",
-                    current = dailySummary.currentProtein,
-                    target = dailySummary.targetProtein,
-                    color = MaterialTheme.colorScheme.tertiary
+                    label = "Carbs (g)",
+                    current = dailySummary.currentCarbs,
+                    target = dailySummary.targetCarbs,
+                    color = MaterialTheme.colorScheme.secondary
                 )
-
                 Divider(
                     modifier = Modifier
                         .height(60.dp)
@@ -373,10 +389,10 @@ fun MacrosCard(dailySummary: DailySummary) {
                         .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
                 )
                 MacroGoalStat(
-                    label = "Carbs (g)",
-                    current = dailySummary.currentCarbs,
-                    target = dailySummary.targetCarbs,
-                    color = MaterialTheme.colorScheme.secondary
+                    label = "Protein (g)",
+                    current = dailySummary.currentProtein,
+                    target = dailySummary.targetProtein,
+                    color = MaterialTheme.colorScheme.tertiary
                 )
                 Divider(
                     modifier = Modifier
@@ -413,11 +429,26 @@ fun MacroGoalStat(label: String, current: Int, target: Int, color: Color) {
                 }
             }, style = MaterialTheme.typography.bodyLarge
         )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            if (target > 0) { // Only show dot if a target is set
+                val (show, indicatorColor) = when {
+                    label.startsWith("Protein") -> if (current >= target) (true to Color.Green) else (true to Color.Red)
+                    else -> if (current > target) (true to Color.Red) else (true to Color.Green)
+                }
+                if (show) {
+                    Box(modifier = Modifier
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(indicatorColor))
+                }
+            }
+        }
     }
 }
 
@@ -451,7 +482,7 @@ fun MealLogList(logs: List<MealLog>, onEdit: (MealLog) -> Unit, onDelete: (MealL
         )
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(logs) { log ->
@@ -469,7 +500,7 @@ fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> 
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = log.description,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
@@ -492,7 +523,7 @@ fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> 
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -560,7 +591,6 @@ fun LogMealDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Show manual fields if Gemini is disabled
                 if (uiState.userSettings?.useGeminiForMacros == false) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -603,7 +633,12 @@ fun LogMealDialog(
                     enabled = uiState.mealInputText.isNotBlank(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (uiState.mealToEdit != null) "Update" else "Log")
+                    val buttonText = if (uiState.mealToEdit != null) {
+                        if (uiState.userSettings?.useGeminiForMacros == true) "Update & Re-analyze" else "Update"
+                    } else {
+                        if (uiState.userSettings?.useGeminiForMacros == true) "Analyze & Log" else "Log"
+                    }
+                    Text(buttonText)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = onDismiss) {
@@ -638,4 +673,3 @@ fun DeleteConfirmationDialog(
         }
     )
 }
-

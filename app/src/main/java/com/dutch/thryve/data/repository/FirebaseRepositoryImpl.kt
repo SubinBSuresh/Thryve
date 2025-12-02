@@ -82,6 +82,7 @@ class FirebaseRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveMealLog(mealLog: MealLog, userId: String) {
+        // Use set() to either create a new document or overwrite an existing one.
         db.collection("users").document(userId).collection("meal_logs").document(mealLog.id).set(mealLog).await()
     }
 
@@ -95,7 +96,17 @@ class FirebaseRepositoryImpl @Inject constructor(
             .snapshots()
             .map { querySnapshot ->
                 Log.i("dutch", "Query for date $date returned ${querySnapshot.size()} documents.")
-                querySnapshot.toObjects(MealLog::class.java)
+                // Manual mapping to include the document ID
+                querySnapshot.documents.mapNotNull { document ->
+                    try {
+                        val mealLog = document.toObject(MealLog::class.java)
+                        // Explicitly set the id from the document itself
+                        mealLog?.copy(id = document.id)
+                    } catch (e: Exception) {
+                        Log.e("dutch", "Failed to parse meal log document ${document.id}", e)
+                        null
+                    }
+                }
             }
     }
 

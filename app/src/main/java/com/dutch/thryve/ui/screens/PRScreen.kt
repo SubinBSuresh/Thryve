@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material3.AlertDialog
@@ -28,6 +30,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,6 +61,20 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+// Helper function to categorize exercises
+private fun getCategoryForExercise(exerciseName: String): String {
+    return when {
+        "Bench" in exerciseName || "Peck Deck" in exerciseName || "Cable Fly" in exerciseName -> "Chest"
+        "Shoulder Press" in exerciseName || "lateral raise" in exerciseName || "front raises" in exerciseName -> "Shoulder"
+        "Squat" in exerciseName || "Leg press" in exerciseName || "Leg curl" in exerciseName || "Leg extension" in exerciseName -> "Legs"
+        "curl" in exerciseName -> "Bicep"
+        "Tricep" in exerciseName || "pushdown" in exerciseName || "kickbacks" in exerciseName -> "Tricep"
+        "Row" in exerciseName || "pulldown" in exerciseName || "Face pulls" in exerciseName -> "Back"
+        "Deadlift" in exerciseName -> "Back"
+        "Forearm" in exerciseName -> "Forearms"
+        else -> "Other"
+    }
+}
 
 @Composable
 fun RankedPRListItem(
@@ -325,17 +342,22 @@ fun PRScreen(
 ) {
     val firebaseViewModel: FirebaseViewModel = hiltViewModel()
     val prList by firebaseViewModel.personalRecord.collectAsState()
+    var selectedCategory by remember { mutableStateOf("All") }
 
-    val groupedPRs = remember(prList) {
-        prList.groupBy { it.exerciseName }.mapValues { (_, records) ->
-            records.sortedByDescending { it.weight }.take(3)
-        }.entries.sortedBy { it.key } // Sort exercises alphabetically
+    val groupedPRs = remember(prList, selectedCategory) {
+        prList
+            .filter { selectedCategory == "All" || getCategoryForExercise(it.exerciseName) == selectedCategory }
+            .groupBy { it.exerciseName }
+            .mapValues { (_, records) ->
+                records.sortedByDescending { it.weight }.take(3)
+            }.entries.sortedBy { it.key } // Sort exercises alphabetically
     }
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var recordToEdit by remember { mutableStateOf<PersonalRecord?>(null) }
     var recordToDelete by remember { mutableStateOf<PersonalRecord?>(null) }
+    val categories = listOf("All", "Chest", "Shoulder", "Legs", "Bicep", "Tricep", "Back", "Forearms")
 
     Scaffold(
         floatingActionButton = {
@@ -364,8 +386,33 @@ fun PRScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                // Filter Chips
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(categories) { category ->
+                        FilterChip(
+                            selected = selectedCategory == category,
+                            onClick = { selectedCategory = category },
+                            label = { Text(category) },
+                            leadingIcon = if (selectedCategory == category) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Filled.Done,
+                                        contentDescription = "Selected",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else {
+                                null
+                            }
+                        )
+                    }
+                }
 
-                if (prList.isEmpty()) {
+                if (groupedPRs.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -373,7 +420,7 @@ fun PRScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "No PRs logged yet. Tap '+' to add one.", color = colorScheme.onSurfaceVariant
+                            "No PRs for this category.", color = colorScheme.onSurfaceVariant
                         )
                     }
                 } else {

@@ -49,13 +49,14 @@ class DailyViewModel @Inject constructor(
         val userId = auth.currentUser?.uid ?: return
         firebaseRepository.getUserSettings(userId).onEach { settings ->
             _uiState.update { currentState ->
+                val currentSettings = settings ?: UserSettings() // Use default if null
                 val newSummary = currentState.dailySummary.copy(
-                    targetCalories = settings?.targetCalories ?: 0,
-                    targetProtein = settings?.targetProtein ?: 0,
-                    targetCarbs = settings?.targetCarbs ?: 0,
-                    targetFat = settings?.targetFat ?: 0
+                    targetCalories = currentSettings.targetCalories,
+                    targetProtein = currentSettings.targetProtein,
+                    targetCarbs = currentSettings.targetCarbs,
+                    targetFat = currentSettings.targetFat
                 )
-                currentState.copy(userSettings = settings, dailySummary = newSummary)
+                currentState.copy(userSettings = currentSettings, dailySummary = newSummary)
             }
         }.launchIn(viewModelScope)
     }
@@ -65,19 +66,20 @@ class DailyViewModel @Inject constructor(
         selectedDateFlow.flatMapLatest { date ->
             firebaseRepository.getMealLogsForDate(userId, date)
         }.onEach { logs ->
-            val totalCalories = logs.sumOf { it.calories }
-            val totalProtein = logs.sumOf { it.protein }
-            val totalCarbs = logs.sumOf { it.carbs }
-            val totalFat = logs.sumOf { it.fat }
-
             _uiState.update { currentState ->
-                val updatedSummary = currentState.dailySummary.copy(
+                val totalCalories = logs.sumOf { it.calories }
+                val totalProtein = logs.sumOf { it.protein }
+                val totalCarbs = logs.sumOf { it.carbs }
+                val totalFat = logs.sumOf { it.fat }
+
+                // Re-create the summary with the latest settings and the new log totals
+                val newSummary = currentState.dailySummary.copy(
                     totalFoodCalories = totalCalories,
                     currentProtein = totalProtein,
                     currentCarbs = totalCarbs,
                     currentFat = totalFat
                 )
-                currentState.copy(mealLogs = logs, dailySummary = updatedSummary)
+                currentState.copy(mealLogs = logs, dailySummary = newSummary)
             }
         }.launchIn(viewModelScope)
     }
@@ -227,12 +229,11 @@ class DailyViewModel @Inject constructor(
 data class CalendarUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val mealLogs: List<MealLog> = emptyList(),
-    val totalCalories: Int = 0,
     val mealInputText: String = "",
     val showInputDialog: Boolean = false,
     val isAwaitingAi: Boolean = false,
     val error: String? = null,
-    val dailySummary: DailySummary = DailySummary.empty(selectedDate, 4000),
+    val dailySummary: DailySummary = DailySummary.empty(selectedDate, 2000), // Default target
     val mealToEdit: MealLog? = null,
     val mealToDelete: MealLog? = null,
     val userSettings: UserSettings? = null,
