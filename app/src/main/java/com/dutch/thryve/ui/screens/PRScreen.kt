@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material3.AlertDialog
@@ -273,9 +272,9 @@ fun ProgressReportDialog(
             }
             if (!isEditing) {
                 Text(
-                    text = "Date: ${
-                        LocalDate.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))
-                    }", style = typography.bodySmall, modifier = Modifier.padding(top = 8.dp)
+                    text = "Date: ${LocalDate.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))}",
+                    style = typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
         }
@@ -355,6 +354,7 @@ fun PRScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .statusBarsPadding()
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -363,9 +363,6 @@ fun PRScreen(
                         style = typography.titleMedium,
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(onClick = { firebaseViewModel.logout() }) {
-                        Icon(Icons.Filled.Logout, contentDescription = "Logout")
-                    }
                 }
 
                 if (prList.isEmpty()) {

@@ -43,7 +43,7 @@ class FirebaseRepositoryImpl @Inject constructor(
                                 val nanoseconds = (dateObject["nanoseconds"] as? Long)?.toInt() ?: 0
                                 Timestamp(seconds, nanoseconds)
                             }
-                            else -> Timestamp.now() // Or handle error appropriately
+                            else -> Timestamp.now()
                         }
 
                         PersonalRecord(
@@ -54,7 +54,6 @@ class FirebaseRepositoryImpl @Inject constructor(
                             date = date
                         )
                     } catch (e: Exception) {
-                        // Log error or handle document conversion failure
                         null
                     }
                 }
@@ -64,8 +63,6 @@ class FirebaseRepositoryImpl @Inject constructor(
     override suspend fun savePersonalRecord(
         record: PersonalRecord, userId: String
     ) {
-
-
         db.collection("users").document(userId).collection("personal_records").add(record)
             .await()
     }
@@ -85,55 +82,20 @@ class FirebaseRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveMealLog(mealLog: MealLog, userId: String) {
-        db.collection("users").document(userId).collection("meal_logs").add(mealLog).await()
+        db.collection("users").document(userId).collection("meal_logs").document(mealLog.id).set(mealLog).await()
     }
 
     override fun getMealLogsForDate(userId: String, date: LocalDate): Flow<List<MealLog>> {
-        Log.i("dutch", "getMealLogsForDate called with userId: $userId, date: $date")
+        val startOfDay = Timestamp(date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
+        val endOfDay = Timestamp(date.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toEpochSecond(), 999_999_999)
 
         return db.collection("users").document(userId).collection("meal_logs")
-            .whereEqualTo("date.year", date.year)
-            .whereEqualTo("date.monthValue", date.monthValue)
-            .whereEqualTo("date.dayOfMonth", date.dayOfMonth)
+            .whereGreaterThanOrEqualTo("date", startOfDay)
+            .whereLessThanOrEqualTo("date", endOfDay)
             .snapshots()
             .map { querySnapshot ->
-                Log.i("dutch", "Query returned ${querySnapshot.size()} documents.")
-                querySnapshot.documents.mapNotNull { document ->
-                    try {
-                        Log.i("dutch", "Processing document: ${document.id} => ${document.data}")
-
-                        val dateObject = document.get("date")
-                        val timestamp = when (dateObject) {
-                            is Timestamp -> dateObject
-                            is Map<*, *> -> {
-                                val year = (dateObject["year"] as? Long)?.toInt() ?: 1970
-                                val month = (dateObject["monthValue"] as? Long)?.toInt() ?: 1
-                                val day = (dateObject["dayOfMonth"] as? Long)?.toInt() ?: 1
-                                val localDate = LocalDate.of(year, month, day)
-                                Timestamp(localDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
-                            }
-                            else -> {
-                                Log.w("dutch", "Unknown date format for document ${document.id}: $dateObject")
-                                Timestamp.now()
-                            }
-                        }
-
-                        MealLog(
-                            id = document.id,
-                            userId = document.getString("userId") ?: "",
-                            date = timestamp,
-                            description = document.getString("description") ?: "",
-                            calories = document.getLong("calories")?.toInt() ?: 0,
-                            protein = document.getLong("protein")?.toInt() ?: 0,
-                            fat = document.getLong("fat")?.toInt() ?: 0,
-                            carbs = document.getLong("carbs")?.toInt() ?: 0,
-                            mealType = document.getString("mealType")?.let { com.dutch.thryve.domain.model.MealType.valueOf(it) }
-                        )
-                    } catch (e: Exception) {
-                        Log.e("dutch", "Failed to parse document ${document.id}", e)
-                        null
-                    }
-                }
+                Log.i("dutch", "Query for date $date returned ${querySnapshot.size()} documents.")
+                querySnapshot.toObjects(MealLog::class.java)
             }
     }
 

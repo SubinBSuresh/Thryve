@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.dutch.thryve.ai.GeminiService
 import com.dutch.thryve.domain.model.DailySummary
 import com.dutch.thryve.domain.model.MealLog
+import com.dutch.thryve.domain.model.UserSettings
 import com.dutch.thryve.data.repository.FirebaseRepositoryImpl
 import com.dutch.thryve.data.repository.TrackerRepositoryImpl
 import com.google.firebase.auth.FirebaseAuth
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -38,6 +40,26 @@ class DailyViewModel @Inject constructor(
 
     private val selectedDateFlow = _uiState.map { it.selectedDate }.distinctUntilChanged()
 
+    init {
+        collectUserSettings()
+        collectMealLogs()
+    }
+
+    private fun collectUserSettings() {
+        val userId = auth.currentUser?.uid ?: return
+        firebaseRepository.getUserSettings(userId).onEach { settings ->
+            _uiState.update { currentState ->
+                val newSummary = currentState.dailySummary.copy(
+                    targetCalories = settings?.targetCalories ?: 0,
+                    targetProtein = settings?.targetProtein ?: 0,
+                    targetCarbs = settings?.targetCarbs ?: 0,
+                    targetFat = settings?.targetFat ?: 0
+                )
+                currentState.copy(userSettings = settings, dailySummary = newSummary)
+            }
+        }.launchIn(viewModelScope)
+    }
+
     private fun collectMealLogs() {
         val userId = auth.currentUser?.uid ?: return
         selectedDateFlow.flatMapLatest { date ->
@@ -49,27 +71,15 @@ class DailyViewModel @Inject constructor(
             val totalFat = logs.sumOf { it.fat }
 
             _uiState.update { currentState ->
-                val newSummary = currentState.dailySummary.copy(
+                val updatedSummary = currentState.dailySummary.copy(
                     totalFoodCalories = totalCalories,
                     currentProtein = totalProtein,
                     currentCarbs = totalCarbs,
                     currentFat = totalFat
                 )
-                currentState.copy(mealLogs = logs, dailySummary = newSummary)
+                currentState.copy(mealLogs = logs, dailySummary = updatedSummary)
             }
         }.launchIn(viewModelScope)
-    }
-
-    init {
-        collectMealLogs()
-    }
-
-    fun updateMealInputText(text: String) {
-        _uiState.update { it.copy(mealInputText = text) }
-    }
-
-    fun updateSelectedDate(date: LocalDate) {
-        _uiState.update { it.copy(selectedDate = date) }
     }
 
     fun onAddMealClicked() {
@@ -77,7 +87,17 @@ class DailyViewModel @Inject constructor(
     }
 
     fun onEditMealClicked(mealLog: MealLog) {
-        _uiState.update { it.copy(mealToEdit = mealLog, showInputDialog = true, mealInputText = mealLog.description) }
+        _uiState.update { 
+            it.copy(
+                mealToEdit = mealLog, 
+                showInputDialog = true, 
+                mealInputText = mealLog.description,
+                manualCalories = mealLog.calories.toString(),
+                manualProtein = mealLog.protein.toString(),
+                manualCarbs = mealLog.carbs.toString(),
+                manualFat = mealLog.fat.toString()
+            ) 
+        }
     }
 
     fun onDeleteMealClicked(mealLog: MealLog) {
@@ -98,32 +118,80 @@ class DailyViewModel @Inject constructor(
         _uiState.update { it.copy(mealToDelete = null) }
     }
 
+    // --- Functions for Manual Entry ---
+    fun onManualCaloriesChanged(calories: String) {
+        _uiState.update { it.copy(manualCalories = calories) }
+    }
+    fun onManualProteinChanged(protein: String) {
+        _uiState.update { it.copy(manualProtein = protein) }
+    }
+    fun onManualCarbsChanged(carbs: String) {
+        _uiState.update { it.copy(manualCarbs = carbs) }
+    }
+    fun onManualFatChanged(fat: String) {
+        _uiState.update { it.copy(manualFat = fat) }
+    }
+    // --------------------------------
+    fun updateMealInputText(text: String) {
+        _uiState.update { it.copy(mealInputText = text) }
+    }
+
+    fun updateSelectedDate(date: LocalDate) {
+        _uiState.update { it.copy(selectedDate = date) }
+    }
+
     fun logOrUpdateMeal() {
+        val useGemini = _uiState.value.userSettings?.useGeminiForMacros == true
+        if (useGemini) {
+            logMealWithGemini()
+        } else {
+            logMealManually()
+        }
+    }
+
+    private fun logMealManually() {
+        val userId = auth.currentUser?.uid ?: return
+        val state = _uiState.value
+
+        val mealLog = MealLog(
+            id = state.mealToEdit?.id ?: UUID.randomUUID().toString(),
+            userId = userId,
+            date = Timestamp(state.selectedDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0),
+            description = state.mealInputText,
+            calories = state.manualCalories.toIntOrNull() ?: 0,
+            protein = state.manualProtein.toIntOrNull() ?: 0,
+            carbs = state.manualCarbs.toIntOrNull() ?: 0,
+            fat = state.manualFat.toIntOrNull() ?: 0
+        )
+
+        viewModelScope.launch {
+            firebaseRepository.saveMealLog(mealLog, userId)
+            toggleInputDialog(false) // Reset state
+        }
+    }
+
+    private fun logMealWithGemini() {
         val userId = auth.currentUser?.uid ?: return
         val mealDescription = _uiState.value.mealInputText
         if (mealDescription.isBlank()) return
-
+        
         val existingMeal = _uiState.value.mealToEdit
 
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(isAwaitingAi = true, showInputDialog = false)
-            }
-
+            _uiState.update { it.copy(isAwaitingAi = true, showInputDialog = false) }
             try {
-                val mealLog = geminiService.analyzeMeal(mealDescription, uiState.value.selectedDate)
+                val date = uiState.value.selectedDate
+                val mealLog = geminiService.analyzeMeal(mealDescription, date)
 
                 if (mealLog != null) {
                     val finalMealLog = mealLog.copy(
                         id = existingMeal?.id ?: mealLog.id,
                         userId = userId
                     )
-                    //TODO update the fb save meallog
-//                    firebaseRepository.saveMealLog(finalMealLog, userId)
+                    firebaseRepository.saveMealLog(finalMealLog, userId)
                 } else {
                     _uiState.update { it.copy(error = "Could not analyze meal. Please try again.") }
                 }
-
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message ?: "An error occurred.") }
                 Log.e("dutch", "Error analyzing meal", e)
@@ -134,7 +202,21 @@ class DailyViewModel @Inject constructor(
     }
 
     fun toggleInputDialog(show: Boolean) {
-        _uiState.update { it.copy(showInputDialog = show) }
+        if (!show) {
+            _uiState.update { 
+                it.copy(
+                    showInputDialog = false, 
+                    mealToEdit = null, 
+                    mealInputText = "",
+                    manualCalories = "",
+                    manualProtein = "",
+                    manualCarbs = "",
+                    manualFat = ""
+                ) 
+            }
+        } else {
+             _uiState.update { it.copy(showInputDialog = true) }
+        }
     }
 
     fun clearError() {
@@ -152,5 +234,11 @@ data class CalendarUiState(
     val error: String? = null,
     val dailySummary: DailySummary = DailySummary.empty(selectedDate, 4000),
     val mealToEdit: MealLog? = null,
-    val mealToDelete: MealLog? = null
+    val mealToDelete: MealLog? = null,
+    val userSettings: UserSettings? = null,
+    // Fields for manual entry
+    val manualCalories: String = "",
+    val manualProtein: String = "",
+    val manualCarbs: String = "",
+    val manualFat: String = ""
 )

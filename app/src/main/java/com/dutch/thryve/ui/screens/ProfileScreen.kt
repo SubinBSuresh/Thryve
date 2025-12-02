@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -171,6 +173,13 @@ fun ProfileScreen(navController: NavHostController, viewModel: ProfileViewModel 
                             "Edit goals"
                         }
                     )
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+
+
+
+                IconButton(onClick = { viewModel.logout() }) {
+                    Icon(Icons.Filled.Logout, contentDescription = "Logout")
                 }
 
 

@@ -97,4 +97,8 @@ class ProfileViewModel @Inject constructor(
             _uiState.update { it.copy(isSaved = true, isEditing = false) } // Switch back to display mode after saving
         }
     }
+
+    fun logout() {
+        auth.signOut()
+    }
 }

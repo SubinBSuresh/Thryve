@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -64,6 +65,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -142,10 +144,16 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
         }
 
         if (uiState.showInputDialog) {
-            LogMealDialog(uiState = uiState,
+            LogMealDialog(
+                uiState = uiState,
                 onDismiss = { viewModel.toggleInputDialog(false) },
                 onLog = { viewModel.logOrUpdateMeal() },
-                onTextChange = viewModel::updateMealInputText)
+                onTextChange = viewModel::updateMealInputText,
+                onCaloriesChanged = viewModel::onManualCaloriesChanged,
+                onProteinChanged = viewModel::onManualProteinChanged,
+                onCarbsChanged = viewModel::onManualCarbsChanged,
+                onFatChanged = viewModel::onManualFatChanged
+            )
         }
 
         uiState.mealToDelete?.let { meal ->
@@ -250,7 +258,7 @@ fun CaloriesCard(dailySummary: DailySummary) {
             containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Filled.LocalFireDepartment,
@@ -266,7 +274,7 @@ fun CaloriesCard(dailySummary: DailySummary) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround,
@@ -328,7 +336,7 @@ fun MacrosCard(dailySummary: DailySummary) {
             containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Filled.PieChart,
@@ -344,18 +352,20 @@ fun MacrosCard(dailySummary: DailySummary) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+
                 MacroGoalStat(
-                    label = "Carbs (g)",
-                    current = dailySummary.currentCarbs,
-                    target = dailySummary.targetCarbs,
-                    color = MaterialTheme.colorScheme.secondary
+                    label = "Protein (g)",
+                    current = dailySummary.currentProtein,
+                    target = dailySummary.targetProtein,
+                    color = MaterialTheme.colorScheme.tertiary
                 )
+
                 Divider(
                     modifier = Modifier
                         .height(60.dp)
@@ -363,10 +373,10 @@ fun MacrosCard(dailySummary: DailySummary) {
                         .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
                 )
                 MacroGoalStat(
-                    label = "Protein (g)",
-                    current = dailySummary.currentProtein,
-                    target = dailySummary.targetProtein,
-                    color = MaterialTheme.colorScheme.tertiary
+                    label = "Carbs (g)",
+                    current = dailySummary.currentCarbs,
+                    target = dailySummary.targetCarbs,
+                    color = MaterialTheme.colorScheme.secondary
                 )
                 Divider(
                     modifier = Modifier
@@ -441,7 +451,7 @@ fun MealLogList(logs: List<MealLog>, onEdit: (MealLog) -> Unit, onDelete: (MealL
         )
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(logs) { log ->
@@ -459,7 +469,7 @@ fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> 
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = log.description,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
@@ -482,7 +492,7 @@ fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> 
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -518,7 +528,11 @@ fun LogMealDialog(
     uiState: CalendarUiState,
     onDismiss: () -> Unit,
     onLog: () -> Unit,
-    onTextChange: (String) -> Unit
+    onTextChange: (String) -> Unit,
+    onCaloriesChanged: (String) -> Unit,
+    onProteinChanged: (String) -> Unit,
+    onCarbsChanged: (String) -> Unit,
+    onFatChanged: (String) -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -543,18 +557,53 @@ fun LogMealDialog(
                     label = { Text("What did you eat?") },
                     placeholder = { Text("e.g., A large pepperoni pizza and a soda") },
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                    singleLine = false,
-                    minLines = 3,
-                    maxLines = 5,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // Show manual fields if Gemini is disabled
+                if (uiState.userSettings?.useGeminiForMacros == false) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = uiState.manualCalories,
+                            onValueChange = onCaloriesChanged,
+                            label = { Text("Cals") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = uiState.manualProtein,
+                            onValueChange = onProteinChanged,
+                            label = { Text("Prt (g)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = uiState.manualCarbs,
+                            onValueChange = onCarbsChanged,
+                            label = { Text("Carbs (g)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = uiState.manualFat,
+                            onValueChange = onFatChanged,
+                            label = { Text("Fat (g)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
                     onClick = onLog,
                     enabled = uiState.mealInputText.isNotBlank(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (uiState.mealToEdit != null) "Update & Analyze" else "Analyze & Log")
+                    Text(if (uiState.mealToEdit != null) "Update" else "Log")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = onDismiss) {
@@ -571,7 +620,7 @@ fun DeleteConfirmationDialog(
     onDismiss: () -> Unit,
     mealDescription: String
 ) {
-    androidx.compose.material3.AlertDialog(
+    AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Confirm Deletion") },
         text = { Text("Are you sure you want to delete the meal: \"$mealDescription\"?") },
@@ -589,3 +638,4 @@ fun DeleteConfirmationDialog(
         }
     )
 }
+
