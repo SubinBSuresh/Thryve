@@ -3,6 +3,7 @@ package com.dutch.thryve.data.repository
 import android.util.Log
 import com.dutch.thryve.domain.model.MealLog
 import com.dutch.thryve.domain.model.PersonalRecord
+import com.dutch.thryve.domain.model.UserSettings
 import com.dutch.thryve.domain.repository.FirebaseRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -134,6 +135,20 @@ class FirebaseRepositoryImpl @Inject constructor(
                     }
                 }
             }
+    }
+
+    override suspend fun deleteMealLog(mealLogId: String, userId: String) {
+        db.collection("users").document(userId).collection("meal_logs").document(mealLogId).delete().await()
+    }
+
+    override suspend fun saveUserSettings(userSettings: UserSettings, userId: String) {
+        db.collection("users").document(userId).collection("settings").document("goals").set(userSettings).await()
+    }
+
+    override fun getUserSettings(userId: String): Flow<UserSettings?> {
+        return db.collection("users").document(userId).collection("settings").document("goals").snapshots().map {
+            it.toObject(UserSettings::class.java)
+        }
     }
 
     override suspend fun initializeFirebase() {

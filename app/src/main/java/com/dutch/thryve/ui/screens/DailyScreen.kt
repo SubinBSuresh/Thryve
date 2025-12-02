@@ -9,6 +9,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -28,20 +29,23 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.surfaceColorAtElevation
@@ -49,8 +53,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -75,20 +81,19 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val DATE_FORMATTER = DateTimeFormatter.ofPattern("EEE, MMM d")
 private val DATE_FORMATTER_HEADER = DateTimeFormatter.ofPattern("EEE, MMM d")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Scaffold(
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            // Only show FAB if not awaiting AI response
             if (!uiState.isAwaitingAi) {
                 FloatingActionButton(
-                    onClick = { viewModel.toggleInputDialog(true) },
+                    onClick = { viewModel.onAddMealClicked() },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = RoundedCornerShape(16.dp)
@@ -96,21 +101,17 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                     Icon(Icons.Filled.Add, "Log Meal")
                 }
             }
-        }
-    ) { paddingValues ->
+        }) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Top Date Selector
             DateSelectorRow(
                 selectedDate = uiState.selectedDate,
                 onDateSelected = viewModel::updateSelectedDate
             )
-
-            // Main Content Area
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -123,40 +124,39 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
 
                 AnimatedContent(
                     targetState = uiState.isAwaitingAi,
-                    transitionSpec = {
-                        (fadeIn() + slideInVertically()).togetherWith(fadeOut() + slideOutVertically())
-                    },
+                    transitionSpec = { (fadeIn() + slideInVertically()).togetherWith(fadeOut() + slideOutVertically()) },
                     label = "meal_log_content_animation"
                 ) { isAwaitingAi ->
                     if (isAwaitingAi) {
                         AiProcessingIndicator(modifier = Modifier.fillMaxWidth())
                     } else if (uiState.mealLogs.isNotEmpty()) {
-                        MealLogList(uiState.mealLogs, modifier = Modifier.weight(1f))
+                        MealLogList(uiState.mealLogs,
+                            onEdit = { viewModel.onEditMealClicked(it) },
+                            onDelete = { viewModel.onDeleteMealClicked(it) },
+                            modifier = Modifier.weight(1f))
                     } else {
-                        Spacer(Modifier.weight(1f)) // Fill space if nothing to show
+                        Spacer(Modifier.weight(1f))
                     }
                 }
             }
         }
 
-        // Log Meal Dialog
         if (uiState.showInputDialog) {
-            LogMealDialog(
-                uiState = uiState,
+            LogMealDialog(uiState = uiState,
                 onDismiss = { viewModel.toggleInputDialog(false) },
-                onLog = viewModel::logMeal,
-                onTextChange = viewModel::updateMealInputText
-            )
+                onLog = { viewModel.logOrUpdateMeal() },
+                onTextChange = viewModel::updateMealInputText)
         }
 
-        // Error Snackbar
+        uiState.mealToDelete?.let { meal ->
+            DeleteConfirmationDialog(onConfirm = { viewModel.onConfirmDelete() },
+                onDismiss = { viewModel.onDismissDeleteDialog() },
+                mealDescription = meal.description)
+        }
+
         uiState.error?.let { errorMessage ->
-            Snackbar(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth()
-            ) { Text(errorMessage) }
             LaunchedEffect(errorMessage) {
+                snackbarHostState.showSnackbar(errorMessage)
                 viewModel.clearError()
             }
         }
@@ -243,7 +243,6 @@ fun DateSelectionCard(
 
 @Composable
 fun CaloriesCard(dailySummary: DailySummary) {
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -302,10 +301,8 @@ fun CaloriesCard(dailySummary: DailySummary) {
                 )
             }
         }
-
     }
 }
-
 
 @Composable
 fun CalorieStat(value: String, label: String, color: Color) {
@@ -321,7 +318,6 @@ fun CalorieStat(value: String, label: String, color: Color) {
         )
     }
 }
-
 
 @Composable
 fun MacrosCard(dailySummary: DailySummary) {
@@ -389,7 +385,6 @@ fun MacrosCard(dailySummary: DailySummary) {
     }
 }
 
-
 @Composable
 fun MacroGoalStat(label: String, current: Int, target: Int, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -416,7 +411,6 @@ fun MacroGoalStat(label: String, current: Int, target: Int, color: Color) {
     }
 }
 
-
 @Composable
 fun AiProcessingIndicator(modifier: Modifier = Modifier) {
     Column(
@@ -436,9 +430,8 @@ fun AiProcessingIndicator(modifier: Modifier = Modifier) {
     }
 }
 
-
 @Composable
-fun MealLogList(logs: List<MealLog>, modifier: Modifier = Modifier) {
+fun MealLogList(logs: List<MealLog>, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Text(
             text = "Meal Details",
@@ -452,24 +445,43 @@ fun MealLogList(logs: List<MealLog>, modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(logs) { log ->
-                MealLogCard(log = log)
+                MealLogCard(log = log, onEdit = onEdit, onDelete = onDelete)
             }
         }
     }
 }
 
 @Composable
-fun MealLogCard(log: MealLog) {
+fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> Unit) {
+    var showMenu by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = log.description,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = log.description,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More actions")
+                    }
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(text = { Text("Edit") }, onClick = {
+                            onEdit(log)
+                            showMenu = false
+                        })
+                        DropdownMenuItem(text = { Text("Delete") }, onClick = {
+                            onDelete(log)
+                            showMenu = false
+                        })
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -488,7 +500,8 @@ fun MealLogCard(log: MealLog) {
 @Composable
 fun MacroStat(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = value,
+        Text(
+            text = value,
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Black),
             color = color
         )
@@ -504,7 +517,7 @@ fun MacroStat(label: String, value: String, color: Color) {
 fun LogMealDialog(
     uiState: CalendarUiState,
     onDismiss: () -> Unit,
-    onLog: (String) -> Unit,
+    onLog: () -> Unit,
     onTextChange: (String) -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -517,8 +530,9 @@ fun LogMealDialog(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                val title = if (uiState.mealToEdit != null) "Edit Meal" else "Log Meal"
                 Text(
-                    text = "Log Meal for ${DATE_FORMATTER_HEADER.format(uiState.selectedDate)}",
+                    text = title + " for ${DATE_FORMATTER_HEADER.format(uiState.selectedDate)}",
                     style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center
                 )
@@ -528,7 +542,6 @@ fun LogMealDialog(
                     onValueChange = onTextChange,
                     label = { Text("What did you eat?") },
                     placeholder = { Text("e.g., A large pepperoni pizza and a soda") },
-                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = "Meal") },
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     singleLine = false,
                     minLines = 3,
@@ -537,11 +550,11 @@ fun LogMealDialog(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
-                    onClick = { onLog(uiState.mealInputText) },
+                    onClick = onLog,
                     enabled = uiState.mealInputText.isNotBlank(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Analyze & Log")
+                    Text(if (uiState.mealToEdit != null) "Update & Analyze" else "Analyze & Log")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = onDismiss) {
@@ -550,4 +563,29 @@ fun LogMealDialog(
             }
         }
     }
+}
+
+@Composable
+fun DeleteConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    mealDescription: String
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirm Deletion") },
+        text = { Text("Are you sure you want to delete the meal: \"$mealDescription\"?") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

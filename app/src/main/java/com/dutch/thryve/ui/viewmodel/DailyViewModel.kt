@@ -72,21 +72,54 @@ class DailyViewModel @Inject constructor(
         _uiState.update { it.copy(selectedDate = date) }
     }
 
-    fun logMeal(mealDescription: String) {
+    fun onAddMealClicked() {
+        _uiState.update { it.copy(mealToEdit = null, showInputDialog = true, mealInputText = "") }
+    }
+
+    fun onEditMealClicked(mealLog: MealLog) {
+        _uiState.update { it.copy(mealToEdit = mealLog, showInputDialog = true, mealInputText = mealLog.description) }
+    }
+
+    fun onDeleteMealClicked(mealLog: MealLog) {
+        _uiState.update { it.copy(mealToDelete = mealLog) }
+    }
+
+    fun onConfirmDelete() {
+        viewModelScope.launch {
+            val userId = auth.currentUser?.uid ?: return@launch
+            _uiState.value.mealToDelete?.let {
+                firebaseRepository.deleteMealLog(it.id, userId)
+            }
+            _uiState.update { it.copy(mealToDelete = null) }
+        }
+    }
+
+    fun onDismissDeleteDialog() {
+        _uiState.update { it.copy(mealToDelete = null) }
+    }
+
+    fun logOrUpdateMeal() {
         val userId = auth.currentUser?.uid ?: return
+        val mealDescription = _uiState.value.mealInputText
         if (mealDescription.isBlank()) return
+
+        val existingMeal = _uiState.value.mealToEdit
 
         viewModelScope.launch {
             _uiState.update {
-                it.copy(isAwaitingAi = true, showInputDialog = false, mealInputText = "")
+                it.copy(isAwaitingAi = true, showInputDialog = false)
             }
 
             try {
-                val date = uiState.value.selectedDate
-                val mealLog = geminiService.analyzeMeal(mealDescription, date)
+                val mealLog = geminiService.analyzeMeal(mealDescription, uiState.value.selectedDate)
 
                 if (mealLog != null) {
-                    firebaseRepository.saveMealLog(mealLog.copy(userId = userId), userId)
+                    val finalMealLog = mealLog.copy(
+                        id = existingMeal?.id ?: mealLog.id,
+                        userId = userId
+                    )
+                    //TODO update the fb save meallog
+//                    firebaseRepository.saveMealLog(finalMealLog, userId)
                 } else {
                     _uiState.update { it.copy(error = "Could not analyze meal. Please try again.") }
                 }
@@ -95,7 +128,7 @@ class DailyViewModel @Inject constructor(
                 _uiState.update { it.copy(error = e.message ?: "An error occurred.") }
                 Log.e("dutch", "Error analyzing meal", e)
             } finally {
-                _uiState.update { it.copy(isAwaitingAi = false) }
+                _uiState.update { it.copy(isAwaitingAi = false, mealToEdit = null, mealInputText = "") }
             }
         }
     }
@@ -117,5 +150,7 @@ data class CalendarUiState(
     val showInputDialog: Boolean = false,
     val isAwaitingAi: Boolean = false,
     val error: String? = null,
-    val dailySummary: DailySummary = DailySummary.empty(selectedDate, 4000)
+    val dailySummary: DailySummary = DailySummary.empty(selectedDate, 4000),
+    val mealToEdit: MealLog? = null,
+    val mealToDelete: MealLog? = null
 )
