@@ -44,6 +44,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -137,6 +138,7 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                         MealLogList(uiState.mealLogs,
                             onEdit = { viewModel.onEditMealClicked(it) },
                             onDelete = { viewModel.onDeleteMealClicked(it) },
+                            onToggleFavorite = { viewModel.onToggleFavorite(it) },
                             modifier = Modifier.weight(1f))
                     } else {
                         Spacer(Modifier.weight(1f))
@@ -154,7 +156,18 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                 onCaloriesChanged = viewModel::onManualCaloriesChanged,
                 onProteinChanged = viewModel::onManualProteinChanged,
                 onCarbsChanged = viewModel::onManualCarbsChanged,
-                onFatChanged = viewModel::onManualFatChanged
+                onFatChanged = viewModel::onManualFatChanged,
+                onShowFavorites = { viewModel.onShowFavoritesDialog(true) }
+            )
+        }
+
+        if (uiState.showFavoritesDialog) {
+            FavoriteMealsDialog(
+                favorites = uiState.favoriteMeals,
+                onDismiss = { viewModel.onShowFavoritesDialog(false) },
+                onSelect = { 
+                    viewModel.onFavoriteMealSelected(it)
+                }
             )
         }
 
@@ -282,13 +295,6 @@ fun CaloriesCard(dailySummary: DailySummary) {
                             .size(4.dp)
                             .clip(CircleShape)
                             .background(Color.Red)
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(4.dp)
-                            .clip(CircleShape)
-                            .background(Color.Green)
                     )
                 }
             }
@@ -472,7 +478,13 @@ fun AiProcessingIndicator(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun MealLogList(logs: List<MealLog>, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> Unit, modifier: Modifier = Modifier) {
+fun MealLogList(
+    logs: List<MealLog>,
+    onEdit: (MealLog) -> Unit,
+    onDelete: (MealLog) -> Unit,
+    onToggleFavorite: (MealLog) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(modifier = modifier) {
         Text(
             text = "Meal Details",
@@ -486,14 +498,14 @@ fun MealLogList(logs: List<MealLog>, onEdit: (MealLog) -> Unit, onDelete: (MealL
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(logs) { log ->
-                MealLogCard(log = log, onEdit = onEdit, onDelete = onDelete)
+                MealLogCard(log = log, onEdit = onEdit, onDelete = onDelete, onToggleFavorite = onToggleFavorite)
             }
         }
     }
 }
 
 @Composable
-fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> Unit) {
+fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> Unit, onToggleFavorite: (MealLog) -> Unit) {
     var showMenu by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -518,6 +530,11 @@ fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> 
                         })
                         DropdownMenuItem(text = { Text("Delete") }, onClick = {
                             onDelete(log)
+                            showMenu = false
+                        })
+                        val favoriteText = if (log.isFavorite) "Remove from Favorites" else "Save as Favorite"
+                        DropdownMenuItem(text = { Text(favoriteText) }, onClick = {
+                            onToggleFavorite(log)
                             showMenu = false
                         })
                     }
@@ -563,7 +580,8 @@ fun LogMealDialog(
     onCaloriesChanged: (String) -> Unit,
     onProteinChanged: (String) -> Unit,
     onCarbsChanged: (String) -> Unit,
-    onFatChanged: (String) -> Unit
+    onFatChanged: (String) -> Unit,
+    onShowFavorites: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -582,6 +600,17 @@ fun LogMealDialog(
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(16.dp))
+                
+                if (uiState.userSettings?.useGeminiForMacros == false) {
+                     OutlinedButton(
+                        onClick = onShowFavorites,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Choose from Favorites")
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
                 OutlinedTextField(
                     value = uiState.mealInputText,
                     onValueChange = onTextChange,
@@ -643,6 +672,31 @@ fun LogMealDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = onDismiss) {
                     Text("Cancel")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FavoriteMealsDialog(
+    favorites: List<MealLog>,
+    onDismiss: () -> Unit,
+    onSelect: (MealLog) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(shape = RoundedCornerShape(16.dp)) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Choose a Favorite", style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(16.dp))
+                if (favorites.isEmpty()) {
+                    Text("You have no favorite meals yet.")
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(favorites) { meal ->
+                            Text(meal.description, modifier = Modifier.clickable { onSelect(meal) }.padding(8.dp).fillMaxWidth())
+                        }
+                    }
                 }
             }
         }

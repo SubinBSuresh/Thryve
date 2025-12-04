@@ -1,15 +1,12 @@
 package com.dutch.thryve.domain.model
 
 import com.google.firebase.Timestamp
-import java.util.UUID
-
 
 data class PersonalRecord(
-    val id: String = UUID.randomUUID().toString(),
-    val exerciseName: String = "  ",
-    val weight: Int = 100,
-    val reps: Int = 100,
+    val id: String = "",
+    val exerciseId: String = "",
+    val exerciseName: String = "", // Keep for display purposes, but don't rely on it for logic
+    val weight: Int = 0,
+    val reps: Int = 0,
     val date: Timestamp = Timestamp.now()
-) {
-    constructor() :this("" , "", 0, 0, Timestamp.now())
-}
+)

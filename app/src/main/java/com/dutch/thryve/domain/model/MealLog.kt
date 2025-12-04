@@ -1,18 +1,18 @@
 package com.dutch.thryve.domain.model
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.PropertyName
 
-enum class MealType {
-    BREAKFAST, LUNCH, DINNER, SNACK
-}
+
 data class MealLog(
-    val id: String = "", // Used for Firestore/Database operations
+    val id: String = "",
     val userId: String = "",
     val date: Timestamp = Timestamp.now(),
-    val mealType: MealType? = null, // New field
     val description: String = "",
     val calories: Int = 0,
-    val protein: Int = 0, // grams
-    val fat: Int = 0,     // grams
-    val carbs: Int = 0    // grams
+    val protein: Int = 0,
+    val carbs: Int = 0,
+    val fat: Int = 0,
+    @get:PropertyName("isFavorite") @set:PropertyName("isFavorite")
+    var isFavorite: Boolean = false
 )

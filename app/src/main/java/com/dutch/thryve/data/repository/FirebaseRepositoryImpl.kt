@@ -99,9 +99,7 @@ class FirebaseRepositoryImpl @Inject constructor(
                 // Manual mapping to include the document ID
                 querySnapshot.documents.mapNotNull { document ->
                     try {
-                        val mealLog = document.toObject(MealLog::class.java)
-                        // Explicitly set the id from the document itself
-                        mealLog?.copy(id = document.id)
+                        document.toObject(MealLog::class.java)?.copy(id = document.id)
                     } catch (e: Exception) {
                         Log.e("dutch", "Failed to parse meal log document ${document.id}", e)
                         null
@@ -112,6 +110,26 @@ class FirebaseRepositoryImpl @Inject constructor(
 
     override suspend fun deleteMealLog(mealLogId: String, userId: String) {
         db.collection("users").document(userId).collection("meal_logs").document(mealLogId).delete().await()
+    }
+
+    override suspend fun updateMealLog(mealLog: MealLog, userId: String) {
+        if (mealLog.id.isBlank()) return
+        db.collection("users").document(userId).collection("meal_logs").document(mealLog.id).set(mealLog).await()
+    }
+
+    override fun getFavoriteMeals(userId: String): Flow<List<MealLog>> {
+        return db.collection("users").document(userId).collection("meal_logs")
+            .whereEqualTo("isFavorite", true)
+            .snapshots()
+            .map { querySnapshot ->
+                querySnapshot.documents.mapNotNull { document ->
+                    try {
+                        document.toObject(MealLog::class.java)?.copy(id = document.id)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
     }
 
     override suspend fun saveUserSettings(userSettings: UserSettings, userId: String) {

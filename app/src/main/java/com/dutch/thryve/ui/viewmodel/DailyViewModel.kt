@@ -4,11 +4,11 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dutch.thryve.ai.GeminiService
+import com.dutch.thryve.data.repository.FirebaseRepositoryImpl
 import com.dutch.thryve.domain.model.DailySummary
 import com.dutch.thryve.domain.model.MealLog
 import com.dutch.thryve.domain.model.UserSettings
-import com.dutch.thryve.data.repository.FirebaseRepositoryImpl
-import com.dutch.thryve.data.repository.TrackerRepositoryImpl
+import com.dutch.thryve.domain.repository.FirebaseRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,7 +29,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DailyViewModel @Inject constructor(
-    private val trackerRepository: TrackerRepositoryImpl,
     private val firebaseRepository: FirebaseRepositoryImpl,
     private val geminiService: GeminiService
 ) : ViewModel() {
@@ -43,13 +42,14 @@ class DailyViewModel @Inject constructor(
     init {
         collectUserSettings()
         collectMealLogs()
+        collectFavoriteMeals()
     }
 
     private fun collectUserSettings() {
         val userId = auth.currentUser?.uid ?: return
         firebaseRepository.getUserSettings(userId).onEach { settings ->
             _uiState.update { currentState ->
-                val currentSettings = settings ?: UserSettings() // Use default if null
+                val currentSettings = settings ?: UserSettings()
                 val newSummary = currentState.dailySummary.copy(
                     targetCalories = currentSettings.targetCalories,
                     targetProtein = currentSettings.targetProtein,
@@ -72,7 +72,6 @@ class DailyViewModel @Inject constructor(
                 val totalCarbs = logs.sumOf { it.carbs }
                 val totalFat = logs.sumOf { it.fat }
 
-                // Re-create the summary with the latest settings and the new log totals
                 val newSummary = currentState.dailySummary.copy(
                     totalFoodCalories = totalCalories,
                     currentProtein = totalProtein,
@@ -81,6 +80,14 @@ class DailyViewModel @Inject constructor(
                 )
                 currentState.copy(mealLogs = logs, dailySummary = newSummary)
             }
+        }.launchIn(viewModelScope)
+    }
+
+    private fun collectFavoriteMeals() {
+        val userId = auth.currentUser?.uid ?: return
+        firebaseRepository.getFavoriteMeals(userId).onEach { favorites ->
+            val distinctFavorites = favorites.distinctBy { it.description.trim().lowercase() }
+            _uiState.update { it.copy(favoriteMeals = distinctFavorites) }
         }.launchIn(viewModelScope)
     }
 
@@ -106,6 +113,29 @@ class DailyViewModel @Inject constructor(
         _uiState.update { it.copy(mealToDelete = mealLog) }
     }
 
+    fun onToggleFavorite(mealLog: MealLog) {
+        viewModelScope.launch {
+            val userId = auth.currentUser?.uid ?: return@launch
+            val updatedMeal = mealLog.copy(isFavorite = !mealLog.isFavorite)
+            try {
+                firebaseRepository.updateMealLog(updatedMeal, userId) // network call
+
+                // Update local state on success
+                val message = if (updatedMeal.isFavorite) "Added to favorites" else "Removed from favorites"
+                _uiState.update { currentState ->
+                    val updatedLogs = currentState.mealLogs.map { log ->
+                        if (log.id == updatedMeal.id) updatedMeal else log
+                    }
+                    currentState.copy(mealLogs = updatedLogs, error = message)
+                }
+
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to update favorite status.") }
+                Log.e("DailyViewModel", "Error toggling favorite", e)
+            }
+        }
+    }
+
     fun onConfirmDelete() {
         viewModelScope.launch {
             val userId = auth.currentUser?.uid ?: return@launch
@@ -118,6 +148,23 @@ class DailyViewModel @Inject constructor(
 
     fun onDismissDeleteDialog() {
         _uiState.update { it.copy(mealToDelete = null) }
+    }
+    
+    fun onShowFavoritesDialog(show: Boolean) {
+        _uiState.update { it.copy(showFavoritesDialog = show) }
+    }
+
+    fun onFavoriteMealSelected(meal: MealLog) {
+        _uiState.update {
+            it.copy(
+                showFavoritesDialog = false,
+                mealInputText = meal.description,
+                manualCalories = meal.calories.toString(),
+                manualProtein = meal.protein.toString(),
+                manualCarbs = meal.carbs.toString(),
+                manualFat = meal.fat.toString()
+            )
+        }
     }
 
     // --- Functions for Manual Entry ---
@@ -163,7 +210,8 @@ class DailyViewModel @Inject constructor(
             calories = state.manualCalories.toIntOrNull() ?: 0,
             protein = state.manualProtein.toIntOrNull() ?: 0,
             carbs = state.manualCarbs.toIntOrNull() ?: 0,
-            fat = state.manualFat.toIntOrNull() ?: 0
+            fat = state.manualFat.toIntOrNull() ?: 0,
+            isFavorite = state.mealToEdit?.isFavorite ?: false
         )
 
         viewModelScope.launch {
@@ -188,7 +236,8 @@ class DailyViewModel @Inject constructor(
                 if (mealLog != null) {
                     val finalMealLog = mealLog.copy(
                         id = existingMeal?.id ?: mealLog.id,
-                        userId = userId
+                        userId = userId,
+                        isFavorite = existingMeal?.isFavorite ?: false
                     )
                     firebaseRepository.saveMealLog(finalMealLog, userId)
                 } else {
@@ -231,12 +280,14 @@ data class CalendarUiState(
     val mealLogs: List<MealLog> = emptyList(),
     val mealInputText: String = "",
     val showInputDialog: Boolean = false,
+    val showFavoritesDialog: Boolean = false,
     val isAwaitingAi: Boolean = false,
     val error: String? = null,
-    val dailySummary: DailySummary = DailySummary.empty(selectedDate, 2000), // Default target
+    val dailySummary: DailySummary = DailySummary.empty(selectedDate, 2000),
     val mealToEdit: MealLog? = null,
     val mealToDelete: MealLog? = null,
     val userSettings: UserSettings? = null,
+    val favoriteMeals: List<MealLog> = emptyList(),
     // Fields for manual entry
     val manualCalories: String = "",
     val manualProtein: String = "",

@@ -51,7 +51,7 @@ class FirebaseViewModel @Inject constructor(private val repository: FirebaseRepo
     }
 
 
-    fun logPersonalRecord(exerciseName: String, weight: Int, reps: Int, date: LocalDate) {
+    fun logPersonalRecord(personalRecord: PersonalRecord) {
 
         val userId = auth.currentUser?.uid
         if (userId == null) return
@@ -59,7 +59,7 @@ class FirebaseViewModel @Inject constructor(private val repository: FirebaseRepo
 
         viewModelScope.launch {
             repository.savePersonalRecord(
-                PersonalRecord("1", exerciseName, weight, reps, Timestamp.now()), userId
+                personalRecord, userId
             )
         }
     }

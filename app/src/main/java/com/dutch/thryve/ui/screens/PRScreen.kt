@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material3.AlertDialog
@@ -34,13 +33,13 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme.colorScheme
-import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,32 +48,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.dutch.thryve.domain.model.Exercise
+import com.dutch.thryve.domain.model.ExerciseProvider
 import com.dutch.thryve.domain.model.PersonalRecord
 import com.dutch.thryve.ui.viewmodel.FirebaseViewModel
-import com.dutch.thryve.ui.viewmodel.PRViewModel
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
-// Helper function to categorize exercises
-private fun getCategoryForExercise(exerciseName: String): String {
-    return when {
-        "Bench" in exerciseName || "Peck Deck" in exerciseName || "Cable Fly" in exerciseName -> "Chest"
-        "Shoulder Press" in exerciseName || "lateral raise" in exerciseName || "front raises" in exerciseName -> "Shoulder"
-        "Squat" in exerciseName || "Leg press" in exerciseName || "Leg curl" in exerciseName || "Leg extension" in exerciseName -> "Legs"
-        "curl" in exerciseName -> "Bicep"
-        "Tricep" in exerciseName || "pushdown" in exerciseName || "kickbacks" in exerciseName -> "Tricep"
-        "Row" in exerciseName || "pulldown" in exerciseName || "Face pulls" in exerciseName -> "Back"
-        "Deadlift" in exerciseName -> "Back"
-        "Forearm" in exerciseName -> "Forearms"
-        else -> "Other"
-    }
-}
 
 @Composable
 fun RankedPRListItem(
@@ -82,10 +68,10 @@ fun RankedPRListItem(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val (medalColor, textStyle) = when (rank) {
-        1 -> Pair(Color(0xFFFFD700), typography.titleSmall)
-        2 -> Pair(Color(0xFFC0C0C0), typography.bodyMedium)
-        3 -> Pair(Color(0xFFCD7F32), typography.bodySmall)
-        else -> Pair(Color.Transparent, typography.bodyLarge)
+        1 -> Pair(Color(0xFFFFD700), MaterialTheme.typography.titleSmall)
+        2 -> Pair(Color(0xFFC0C0C0), MaterialTheme.typography.bodyMedium)
+        3 -> Pair(Color(0xFFCD7F32), MaterialTheme.typography.bodySmall)
+        else -> Pair(Color.Transparent, MaterialTheme.typography.bodyLarge)
     }
 
     val formattedDate = remember(record.date) {
@@ -115,12 +101,12 @@ fun RankedPRListItem(
             Text(
                 text = "${record.weight} kg x ${record.reps} reps",
                 style = textStyle,
-                color = if (rank == 1) colorScheme.primary else Color.Unspecified
+                color = if (rank == 1) MaterialTheme.colorScheme.primary else Color.Unspecified
             )
             Text(
                 text = formattedDate,
-                style = typography.bodySmall,
-                color = colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -160,8 +146,8 @@ fun ExercisePRsItem(
         Column(modifier = Modifier.padding(vertical = 8.dp)) {
             Text(
                 text = exerciseName,
-                style = typography.titleMedium,
-                color = colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
             )
             records.forEachIndexed { index, record ->
@@ -181,75 +167,55 @@ fun ExercisePRsItem(
 fun ProgressReportDialog(
     recordToEdit: PersonalRecord?,
     onDismissRequest: () -> Unit,
-    onSave: (exerciseName: String, weight: Int, reps: Int) -> Unit
+    onSave: (exercise: Exercise, weight: Int, reps: Int) -> Unit
 ) {
     val isEditing = recordToEdit != null
     val title = if (isEditing) "Edit Personal Record" else "Log New Personal Record"
 
-    var exerciseName by remember { mutableStateOf(recordToEdit?.exerciseName ?: "") }
+    val initialExercise = remember(recordToEdit) {
+        if (recordToEdit != null) {
+            ExerciseProvider.exercises.find { it.id == recordToEdit.exerciseId }
+                ?: ExerciseProvider.exercises.find { it.name == recordToEdit.exerciseName }
+        } else {
+            null
+        }
+    }
+
+    var selectedCategory by remember { mutableStateOf(initialExercise?.category) }
+    var selectedExercise by remember { mutableStateOf(initialExercise) }
     var weightInput by remember { mutableStateOf(recordToEdit?.weight?.toString() ?: "") }
     var repsInput by remember { mutableStateOf(recordToEdit?.reps?.toString() ?: "") }
 
-    val exercises = listOf(
-        "Barbell Squat",
-        "Flat Bench Press",
-        "Inclined Bench Press",
-        "Dumbbell Shoulder Press",
-        "Peck Deck Machine",
-        "Cable Fly",
-        "Deadlift",
-        "Overhead Press",
-        "Barbell Row",
-        "Dumbell Chest Press",
-        "Dumbell lateral raise",
-        "Cable lateral raise",
-        "Face pulls",
-        "Concentration curls",
-        "Preacher curls dumbell",
-        "Dumbell curl",
-        "Hammer curls",
-        "Cable bicep curls",
-        "Trciep pushdown bar",
-        "Tricep pushdown rope",
-        "Forearm curls",
-        "Leg press",
-        "Leg curl",
-        "Leg extension",
-        "Calf raise",
-        "Lat pulldown VBar",
-        "Lat Pulldown straight bar",
-        "Cable machine row VBar",
-        "Linear Row",
-        "Cable machine row close grip",
-        "Dumbell front raises",
-        "Barbell upright row",
-        "Shrugs",
-        "Cable crossovers",
-        "Overhear tricep extension bar",
-        "Cable single arm kickbacks",
-        "Dumbell tricep extension"
-    )
-    var expanded by remember { mutableStateOf(false) }
+    val categories = remember { ExerciseProvider.exercises.map { it.category }.distinct().sorted() }
+    var filteredExercises by remember { mutableStateOf<List<Exercise>>(emptyList()) }
 
-    val isValid =
-        exerciseName.isNotBlank() && weightInput.toIntOrNull() != null && repsInput.toIntOrNull() != null
+    LaunchedEffect(selectedCategory) {
+        filteredExercises = if (selectedCategory != null) {
+            ExerciseProvider.exercises.filter { it.category == selectedCategory }
+        } else {
+            emptyList()
+        }
+    }
+
+    var categoryExpanded by remember { mutableStateOf(false) }
+    var exerciseExpanded by remember { mutableStateOf(false) }
+
+    val isValid = selectedExercise != null && weightInput.toIntOrNull() != null && repsInput.toIntOrNull() != null
 
     AlertDialog(onDismissRequest = onDismissRequest, title = { Text(title) }, text = {
         Column {
-            // Exercise Dropdown
+            // Category Dropdown
             ExposedDropdownMenuBox(
-                expanded = !isEditing && expanded, // Disable dropdown when editing
-                onExpandedChange = { if (!isEditing) expanded = !expanded },
+                expanded = !isEditing && categoryExpanded,
+                onExpandedChange = { if (!isEditing) categoryExpanded = !categoryExpanded },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = exerciseName,
+                    value = selectedCategory ?: "",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Exercise Name") },
-                    trailingIcon = {
-                        if (!isEditing) ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                    },
+                    label = { Text("Category") },
+                    trailingIcon = { if (!isEditing) ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
                     modifier = Modifier
                         .menuAnchor()
                         .fillMaxWidth()
@@ -257,11 +223,45 @@ fun ProgressReportDialog(
                     enabled = !isEditing
                 )
                 ExposedDropdownMenu(
-                    expanded = !isEditing && expanded, onDismissRequest = { expanded = false }) {
-                    exercises.forEach { selectionOption ->
-                        DropdownMenuItem(text = { Text(selectionOption) }, onClick = {
-                            exerciseName = selectionOption
-                            expanded = false
+                    expanded = !isEditing && categoryExpanded,
+                    onDismissRequest = { categoryExpanded = false }
+                ) {
+                    categories.forEach { category ->
+                        DropdownMenuItem(text = { Text(category) }, onClick = {
+                            selectedCategory = category
+                            selectedExercise = null // Reset exercise when category changes
+                            categoryExpanded = false
+                        })
+                    }
+                }
+            }
+
+            // Exercise Dropdown
+            ExposedDropdownMenuBox(
+                expanded = !isEditing && exerciseExpanded && selectedCategory != null,
+                onExpandedChange = { if (!isEditing && selectedCategory != null) exerciseExpanded = !exerciseExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedExercise?.name ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Exercise") },
+                    trailingIcon = { if (!isEditing && selectedCategory != null) ExposedDropdownMenuDefaults.TrailingIcon(expanded = exerciseExpanded) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    enabled = !isEditing && selectedCategory != null
+                )
+                ExposedDropdownMenu(
+                    expanded = !isEditing && exerciseExpanded && selectedCategory != null,
+                    onDismissRequest = { exerciseExpanded = false }
+                ) {
+                    filteredExercises.forEach { exercise ->
+                        DropdownMenuItem(text = { Text(exercise.name) }, onClick = {
+                            selectedExercise = exercise
+                            exerciseExpanded = false
                         })
                     }
                 }
@@ -290,7 +290,7 @@ fun ProgressReportDialog(
             if (!isEditing) {
                 Text(
                     text = "Date: ${LocalDate.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))}",
-                    style = typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
@@ -299,7 +299,7 @@ fun ProgressReportDialog(
         Button(
             onClick = {
                 if (isValid) {
-                    onSave(exerciseName.trim(), weightInput.toInt(), repsInput.toInt())
+                    onSave(selectedExercise!!, weightInput.toInt(), repsInput.toInt())
                 }
             }, enabled = isValid
         ) {
@@ -338,26 +338,40 @@ fun DeleteConfirmationDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PRScreen(
-    navController: NavHostController, viewModel: PRViewModel = hiltViewModel()
+    navController: NavHostController, firebaseViewModel: FirebaseViewModel = hiltViewModel()
 ) {
-    val firebaseViewModel: FirebaseViewModel = hiltViewModel()
     val prList by firebaseViewModel.personalRecord.collectAsState()
     var selectedCategory by remember { mutableStateOf("All") }
 
+    val exercisesById = remember { ExerciseProvider.exercises.associateBy { it.id } }
+    val exercisesByName = remember { ExerciseProvider.exercises.associateBy { it.name } }
+
     val groupedPRs = remember(prList, selectedCategory) {
         prList
-            .filter { selectedCategory == "All" || getCategoryForExercise(it.exerciseName) == selectedCategory }
-            .groupBy { it.exerciseName }
-            .mapValues { (_, records) ->
-                records.sortedByDescending { it.weight }.take(3)
-            }.entries.sortedBy { it.key } // Sort exercises alphabetically
+            .mapNotNull { record ->
+                val exercise = if (record.exerciseId.isNotEmpty()) {
+                    exercisesById[record.exerciseId]
+                } else {
+                    exercisesByName[record.exerciseName]
+                }
+                exercise?.let { Pair(record, it) }
+            }
+            .filter { (_, exercise) ->
+                selectedCategory == "All" || exercise.category == selectedCategory
+            }
+            .groupBy { (_, exercise) -> exercise }
+            .map { (exercise, pairs) ->
+                val topRecords = pairs.map { it.first }.sortedByDescending { it.weight }.take(3)
+                exercise to topRecords
+            }
+            .sortedBy { (exercise, _) -> exercise.name }
     }
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var recordToEdit by remember { mutableStateOf<PersonalRecord?>(null) }
     var recordToDelete by remember { mutableStateOf<PersonalRecord?>(null) }
-    val categories = listOf("All", "Chest", "Shoulder", "Legs", "Bicep", "Tricep", "Back", "Forearms")
+    val categories = remember { listOf("All") + ExerciseProvider.exercises.map { it.category }.distinct().sorted() }
 
     Scaffold(
         floatingActionButton = {
@@ -365,13 +379,15 @@ fun PRScreen(
                 onClick = { // For adding a new PR
                     recordToEdit = null
                     showEditDialog = true
-                }, containerColor = colorScheme.primary, shape = RoundedCornerShape(16.dp)
+                }, containerColor = MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "Add New PR")
             }
         }, content = { innerPadding ->
 
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)) {
                 // Custom Header
                 Row(
                     modifier = Modifier
@@ -379,95 +395,76 @@ fun PRScreen(
                         .statusBarsPadding()
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Personal Records",
-                        style = typography.titleMedium,
-                        modifier = Modifier.weight(1f)
+                        "Personal Records",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-                // Filter Chips
+
+                // Category Filter Chips
                 LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(categories) { category ->
                         FilterChip(
                             selected = selectedCategory == category,
                             onClick = { selectedCategory = category },
-                            label = { Text(category) },
-                            leadingIcon = if (selectedCategory == category) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Filled.Done,
-                                        contentDescription = "Selected",
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            } else {
-                                null
-                            }
-                        )
+                            label = { Text(category) })
                     }
                 }
 
-                if (groupedPRs.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "No PRs for this category.", color = colorScheme.onSurfaceVariant
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    items(groupedPRs) { (exercise, records) ->
+                        ExercisePRsItem(
+                            exerciseName = exercise.name,
+                            records = records,
+                            onEditRecord = { record ->
+                                recordToEdit = record
+                                showEditDialog = true
+                            },
+                            onDeleteRecord = { record ->
+                                recordToDelete = record
+                                showDeleteDialog = true
+                            }
                         )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        contentPadding = innerPadding,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(groupedPRs) { (exerciseName, records) ->
-                            ExercisePRsItem(exerciseName = exerciseName,
-                                records = records,
-                                onEditRecord = {
-                                    recordToEdit = it
-                                    showEditDialog = true
-                                },
-                                onDeleteRecord = {
-                                    recordToDelete = it
-                                    showDeleteDialog = true
-                                })
-                        }
                     }
                 }
             }
 
             if (showEditDialog) {
-                ProgressReportDialog(recordToEdit = recordToEdit,
-                    onDismissRequest = { showEditDialog = false },
-                    onSave = { name, weight, reps ->
-                        if (recordToEdit == null) {
-                            // Create new record
-                            firebaseViewModel.logPersonalRecord(name, weight, reps, LocalDate.now())
-                        } else {
-                            // Update existing record
-                            val updatedRecord = recordToEdit!!.copy(weight = weight, reps = reps)
-                            firebaseViewModel.updatePersonalRecord(updatedRecord)
-                        }
-                        showEditDialog = false
-                    })
+                val currentRecordToEdit = recordToEdit
+                ProgressReportDialog(recordToEdit = currentRecordToEdit, onDismissRequest = { showEditDialog = false }, onSave = { exercise, weight, reps ->
+                    if (currentRecordToEdit != null) {
+                        val updatedRecord = currentRecordToEdit.copy(weight = weight, reps = reps)
+                        firebaseViewModel.updatePersonalRecord(updatedRecord)
+                    } else {
+                        val newRecord = PersonalRecord(
+                            exerciseId = exercise.id,
+                            exerciseName = exercise.name,
+                            weight = weight,
+                            reps = reps
+                        )
+                        firebaseViewModel.logPersonalRecord(newRecord)
+                    }
+                    showEditDialog = false
+                })
             }
 
             if (showDeleteDialog) {
-                DeleteConfirmationDialog(onConfirm = {
-                    recordToDelete?.let { firebaseViewModel.deletePersonalRecord(it) }
-                    showDeleteDialog = false
-                }, onDismiss = { showDeleteDialog = false })
+                val currentRecordToDelete = recordToDelete
+                if (currentRecordToDelete != null) {
+                    DeleteConfirmationDialog(onConfirm = {
+                        firebaseViewModel.deletePersonalRecord(currentRecordToDelete)
+                        showDeleteDialog = false
+                    }, onDismiss = { showDeleteDialog = false })
+                }
             }
         })
 }
