@@ -12,6 +12,27 @@ plugins {
 //    id("kotlin-serialization")
 }
 
+android.applicationVariants.all {
+    outputs.all {
+        val variantName = name
+        val copyTaskName = "copy${variantName.capitalize()}Apk"
+
+        tasks.register<Copy>(copyTaskName) {
+            dependsOn(assembleProvider)
+
+            from(outputFile)
+            into("${rootProject.projectDir}/apk")
+
+            rename {
+                "Thryve-$variantName.apk"
+            }
+        }
+
+        assembleProvider.get().finalizedBy(copyTaskName)
+    }
+}
+
+
 val localProperties = Properties().apply {
     val localPropertiesFile = project.rootProject.file("local.properties")
     if (localPropertiesFile.exists()) {
@@ -108,5 +129,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
 
     // Charting
-    implementation("com.patrykandpatrick.vico:compose-m3:1.14.0")
+    // implementation(libs.vico.core)
+    // implementation(libs.vico.compose)
+    // implementation(libs.vico.compose.m3)
 }

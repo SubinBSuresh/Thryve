@@ -108,6 +108,25 @@ class FirebaseRepositoryImpl @Inject constructor(
             }
     }
 
+    override fun getMealLogsForDateRange(userId: String, startDate: LocalDate, endDate: LocalDate): Flow<List<MealLog>> {
+        val startTimestamp = Timestamp(startDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
+        val endTimestamp = Timestamp(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toEpochSecond(), 999_999_999)
+
+        return db.collection("users").document(userId).collection("meal_logs")
+            .whereGreaterThanOrEqualTo("date", startTimestamp)
+            .whereLessThanOrEqualTo("date", endTimestamp)
+            .snapshots()
+            .map { querySnapshot ->
+                querySnapshot.documents.mapNotNull { document ->
+                    try {
+                        document.toObject(MealLog::class.java)?.copy(id = document.id)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
+    }
+
     override suspend fun deleteMealLog(mealLogId: String, userId: String) {
         db.collection("users").document(userId).collection("meal_logs").document(mealLogId).delete().await()
     }

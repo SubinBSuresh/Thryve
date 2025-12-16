@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -85,7 +86,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Splash : Screen("splash", "Splash", Icons.Default.Home)
     object Login : Screen("login", "Login", Icons.Default.AccountCircle)
     object Signup : Screen("signup", "Signup", Icons.Default.AccountCircle)
-    object Dashboard : Screen("dashboard", "Dashboard", Icons.Default.Home)
+    object Dashboard : Screen("dashboard", "Dashboard", Icons.Default.Assessment)
     object Activity : Screen("activity", "Activity", Icons.Default.Person)
     object Nutrition : Screen("nutrition", "Nutrition", Icons.Default.LocalDining)
     object Progress : Screen("progress", "Progress", Icons.Default.KeyboardArrowUp)
@@ -94,7 +95,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Profile : Screen("profile", "Profile", Icons.Default.Person)
 }
 
-val bottomNavItems = listOf(Screen.Nutrition, Screen.PR, Screen.Profile)
+val bottomNavItems = listOf(Screen.Dashboard, Screen.Nutrition, Screen.PR, Screen.Profile)
 
 @Composable
 fun MainScreen() {
@@ -108,6 +109,10 @@ fun MainScreen() {
         val listener = FirebaseAuth.AuthStateListener { auth ->
             if (auth.currentUser == null && currentRoute !in nonAuthRoutes) {
                 navController.navigate(Screen.Login.route) {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                }
+            } else if (auth.currentUser != null && currentRoute in nonAuthRoutes) {
+                navController.navigate(Screen.Dashboard.route) {
                     popUpTo(navController.graph.startDestinationId) { inclusive = true }
                 }
             }
@@ -137,6 +142,7 @@ fun MainScreen() {
             composable(Screen.Signup.route) {
                 SignupScreen(navController)
             }
+            composable(Screen.Dashboard.route) { DashboardScreen() }
             composable(Screen.Nutrition.route) { DailyScreen(navController) }
             composable(Screen.PR.route) { PRScreen(navController) }
             composable(Screen.Profile.route) { ProfileScreen(navController) }
@@ -156,9 +162,9 @@ fun ThryveBottomBar(navController: NavHostController, currentRoute: String?) {
                 onClick = {
                     if (currentRoute != screen.route) {
                         navController.navigate(screen.route) {
-                            popUpTo(Screen.Nutrition.route) { // This should be the start destination of your bottom nav graph
+                            popUpTo(Screen.Dashboard.route) { // This should be the start destination of your bottom nav graph
                                 saveState = true
-                                inclusive = true
+                                inclusive = false
                             }
                             launchSingleTop = true
                             restoreState = true
