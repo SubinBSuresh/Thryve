@@ -17,6 +17,7 @@ interface FirebaseRepository {
     suspend fun deleteMealLog(mealLogId: String, userId: String)
     suspend fun updateMealLog(mealLog: MealLog, userId: String)
     fun getFavoriteMeals(userId: String): Flow<List<MealLog>>
+    fun getMealLogsForDateRange(userId: String, startDate: LocalDate, endDate: LocalDate): Flow<List<MealLog>>
 
     suspend fun saveUserSettings(userSettings: UserSettings, userId: String)
     fun getUserSettings(userId: String): Flow<UserSettings?>
