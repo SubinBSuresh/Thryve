@@ -1,5 +1,6 @@
 package com.dutch.thryve.ai
 
+import android.util.Log
 import com.dutch.thryve.BuildConfig
 import com.dutch.thryve.domain.model.MealLog
 import com.google.firebase.Timestamp
@@ -19,28 +20,28 @@ import java.util.UUID
 
 
 private const val API_KEY = BuildConfig.GEMINI_API_KEY
-private const val GEMINI_MODEL = "gemini-1.5-flash-preview-0514"
-private const val API_URL = "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent?key=$API_KEY"
+private const val GEMINI_MODEL = "gemini-2.0-flash"
+private const val API_URL = "https://generativelanguage.googleapis.com/v1/models/$GEMINI_MODEL:generateContent?key=$API_KEY"
 
 // --- @SERIALIZABLE DATA CLASSES FOR API REQUEST PAYLOAD ---
 
 @Serializable
-data class Property(
+data class GeminiProperty(
     val type: String,
     val description: String
 )
 
 @Serializable
-data class AnalysisSchema(
+data class GeminiAnalysisSchema(
     val type: String,
-    val properties: Map<String, Property>,
+    val properties: Map<String, GeminiProperty>,
     val required: List<String>
 )
 
 @Serializable
 data class GenerationConfig(
     val responseMimeType: String,
-    val responseSchema: AnalysisSchema
+    val responseSchema: GeminiAnalysisSchema
 )
 
 @Serializable
@@ -72,7 +73,7 @@ data class GeminiRequest(
  * Represents the final structured JSON output from the AI, containing the nutritional data.
  */
 @Serializable
-data class AnalysisResult(
+data class GeminiAnalysisResult(
     val description: String,
     val calories: Int,
     val protein: Int,
@@ -104,14 +105,14 @@ class GeminiService @Inject constructor() {
         coerceInputValues = true
     }
 
-    private val analysisSchema = AnalysisSchema(
+    private val analysisSchema = GeminiAnalysisSchema(
         type = "OBJECT",
         properties = mapOf(
-            "description" to Property("STRING", "A clean, concise description of the meal."),
-            "calories" to Property("INTEGER", "Total estimated calories in kcal."),
-            "protein" to Property("INTEGER", "Total estimated protein in grams."),
-            "fat" to Property("INTEGER", "Total estimated fat in grams."),
-            "carbs" to Property("INTEGER", "Total estimated carbohydrates in grams.")
+            "description" to GeminiProperty("STRING", "A clean, concise description of the meal."),
+            "calories" to GeminiProperty("INTEGER", "Total estimated calories in kcal."),
+            "protein" to GeminiProperty("INTEGER", "Total estimated protein in grams."),
+            "fat" to GeminiProperty("INTEGER", "Total estimated fat in grams."),
+            "carbs" to GeminiProperty("INTEGER", "Total estimated carbohydrates in grams.")
         ),
         required = listOf("description", "calories", "protein", "fat", "carbs")
     )
@@ -124,6 +125,7 @@ class GeminiService @Inject constructor() {
     """.trimIndent()
 
     suspend fun analyzeMeal(mealDescription: String, date: LocalDate): MealLog? {
+        Log.i("GeminiService", "api url $API_URL")
         if (API_KEY.isBlank()) {
             System.err.println("FATAL ERROR: The Gemini API Key is missing. Please set the API_KEY constant in DefaultGeminiService.kt.")
             return null
@@ -144,7 +146,6 @@ class GeminiService @Inject constructor() {
 
         val payloadJson = json.encodeToString(payload)
 
-        //nw call
         val responseText = try {
             makePostRequest(API_URL, payloadJson)
         } catch (e: Exception) {
@@ -173,7 +174,7 @@ class GeminiService @Inject constructor() {
             }
 
             // 3. Parse the structured JSON response into our final AnalysisResult object
-            val analysisResult = json.decodeFromString<AnalysisResult>(jsonText)
+            val analysisResult = json.decodeFromString<GeminiAnalysisResult>(jsonText)
             val timestamp = Timestamp(date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
 
             MealLog(
@@ -194,20 +195,15 @@ class GeminiService @Inject constructor() {
     }
 }
 
-/**
- * Performs an asynchronous HTTP POST request using HttpURLConnection on the Dispatchers.IO thread.
- * @throws Exception for networking or API errors.
- */
 private suspend fun makePostRequest(url: String, body: String): String = withContext(Dispatchers.IO) {
     val connection = URL(url).openConnection() as HttpURLConnection
     connection.requestMethod = "POST"
     connection.setRequestProperty("Content-Type", "application/json")
     connection.doOutput = true
-    connection.connectTimeout = 10000 // 10 seconds
-    connection.readTimeout = 10000 // 10 seconds
+    connection.connectTimeout = 30000 // 30 seconds
+    connection.readTimeout = 30000 // 30 seconds
 
     try {
-        // Write the request body
         connection.outputStream.use { os ->
             os.write(body.toByteArray())
             os.flush()
@@ -220,20 +216,18 @@ private suspend fun makePostRequest(url: String, body: String): String = withCon
             connection.errorStream
         }
 
-        // Read the response body
         val responseBody = BufferedReader(InputStreamReader(responseStream)).use { br ->
             br.readText()
         }
 
         if (responseCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
             val errorMessage = "HTTP Error $responseCode: $responseBody"
-            System.err.println(errorMessage) // Log the error body
+            System.err.println(errorMessage)
             throw Exception(errorMessage)
         }
 
         return@withContext responseBody
     } finally {
-        // Always disconnect the connection
         connection.disconnect()
     }
 }

@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dutch.thryve.ai.GeminiService
+import com.dutch.thryve.ai.OpenAIMessage
+import com.dutch.thryve.ai.OpenAIService
 import com.dutch.thryve.data.repository.FirebaseRepositoryImpl
 import com.dutch.thryve.domain.model.DailySummary
 import com.dutch.thryve.domain.model.MealLog
@@ -30,7 +32,8 @@ import javax.inject.Inject
 @HiltViewModel
 class DailyViewModel @Inject constructor(
     private val firebaseRepository: FirebaseRepositoryImpl,
-    private val geminiService: GeminiService
+    private val geminiService: GeminiService,
+    private val openAIService: OpenAIService
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
@@ -231,7 +234,9 @@ class DailyViewModel @Inject constructor(
             _uiState.update { it.copy(isAwaitingAi = true, showInputDialog = false) }
             try {
                 val date = uiState.value.selectedDate
-                val mealLog = geminiService.analyzeMeal(mealDescription, date)
+//                val mealLog = geminiService.analyzeMeal(mealDescription, date)
+                val mealLog = openAIService.analyzeMeal(mealDescription, date)
+
 
                 if (mealLog != null) {
                     val finalMealLog = mealLog.copy(

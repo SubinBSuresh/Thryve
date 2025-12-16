@@ -36,16 +36,12 @@ android {
         buildConfigField("String", "TEST_EMAIL", "\"${localProperties.getProperty("TEST_EMAIL")}\"")
         buildConfigField("String", "TEST_PASSWORD", "\"${localProperties.getProperty("TEST_PASSWORD")}\"")
         buildConfigField("String", "GEMINI_API_KEY", "\"${localProperties.getProperty("GEMINI_API_KEY")}\"")
+        buildConfigField("String", "OPENAI_SECRET_KEY", "\"${localProperties.getProperty("OPENAI_SECRET_KEY")}\"")
     }
 
     buildTypes {
         release {
-            //strip unused code
-            isMinifyEnabled = true
-
-            //strip unused resources
-            isShrinkResources = true
-
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
@@ -106,4 +102,11 @@ dependencies {
 
     //icons
     implementation(libs.androidx.material.icons.extended)
+
+    //okhttp
+    implementation(libs.okhttp)
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // Charting
+    implementation("com.patrykandpatrick.vico:compose-m3:1.14.0")
 }
