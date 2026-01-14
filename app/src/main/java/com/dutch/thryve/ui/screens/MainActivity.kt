@@ -22,20 +22,26 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocalDining
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
@@ -45,6 +51,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.dutch.thryve.ThryveApplication.Companion.LOG_TAG
 import com.dutch.thryve.ui.theme.ThryveTheme
+import com.dutch.thryve.util.NetworkObserver
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -103,6 +110,33 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val nonAuthRoutes = listOf(Screen.Splash.route, Screen.Login.route, Screen.Signup.route)
+    
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val networkObserver = remember { NetworkObserver(context) }
+    val networkStatus by networkObserver.observe.collectAsState(initial = NetworkObserver.Status.Available)
+
+    // Handle Network Status Changes
+    LaunchedEffect(networkStatus) {
+        when (networkStatus) {
+            NetworkObserver.Status.Lost, NetworkObserver.Status.Unavailable -> {
+                snackbarHostState.showSnackbar(
+                    message = "No internet connection",
+                    duration = SnackbarDuration.Indefinite
+                )
+            }
+            NetworkObserver.Status.Available -> {
+                // Only show "Back online" if there was a previous snackbar showing
+                if (snackbarHostState.currentSnackbarData != null) {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar(
+                        message = "Back online",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
+        }
+    }
 
     // Listen for auth state changes
     DisposableEffect(Unit) {
@@ -123,11 +157,14 @@ fun MainScreen() {
         }
     }
 
-    Scaffold(bottomBar = {
-        if (currentRoute !in nonAuthRoutes) {
-            ThryveBottomBar(navController = navController, currentRoute = currentRoute)
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            if (currentRoute !in nonAuthRoutes) {
+                ThryveBottomBar(navController = navController, currentRoute = currentRoute)
+            }
         }
-    }) { innerPadding ->
+    ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = Screen.Splash.route,
