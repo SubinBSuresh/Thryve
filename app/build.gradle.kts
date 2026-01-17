@@ -58,6 +58,7 @@ android {
         buildConfigField("String", "TEST_PASSWORD", "\"${localProperties.getProperty("TEST_PASSWORD")}\"")
         buildConfigField("String", "GEMINI_API_KEY", "\"${localProperties.getProperty("GEMINI_API_KEY")}\"")
         buildConfigField("String", "OPENAI_SECRET_KEY", "\"${localProperties.getProperty("OPENAI_SECRET_KEY")}\"")
+        buildConfigField("String", "OPENROUTER_SECRET_KEY", "\"${localProperties.getProperty("OPENROUTER_SECRET_KEY")}\"")
     }
 
     buildTypes {

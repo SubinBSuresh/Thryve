@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
@@ -40,26 +41,21 @@ class ThryveApplication: Application() {
             val notificationManager: NotificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
+            Log.d(LOG_TAG, "Notification channel created")
         }
     }
 
     private fun scheduleMealReminders() {
         val workManager = WorkManager.getInstance(this)
 
-        // Define constraints (optional)
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
             .build()
 
-        // Schedule for 8 AM
-        scheduleWork(workManager, constraints, "MealReminder8am", 9, 50)
-
-        // Schedule for 1 PM
-        scheduleWork(workManager, constraints, "MealReminder1pm", 13, 50)
-
-        // Schedule for 7 PM
-        scheduleWork(workManager, constraints, "MealReminder7pm", 19, 50)
-        scheduleWork(workManager, constraints, "MealReminder7pm", 11,50)
+        // Unique names for each reminder to ensure they don't overwrite each other
+        scheduleWork(workManager, constraints, "MealReminder_Morning", 8, 0)
+        scheduleWork(workManager, constraints, "MealReminder_Lunch", 13, 0)
+        scheduleWork(workManager, constraints, "MealReminder_Evening", 19, 0)
     }
 
     private fun scheduleWork(workManager: WorkManager, constraints: Constraints, uniqueWorkName: String, hourOfDay: Int, minuteOfDay: Int) {
@@ -74,6 +70,7 @@ class ThryveApplication: Application() {
         }
 
         val initialDelay = target.timeInMillis - now.timeInMillis
+        Log.d(LOG_TAG, "Scheduling $uniqueWorkName for $hourOfDay:$minuteOfDay. Initial delay: ${initialDelay / 1000 / 60} minutes")
 
         val periodicWorkRequest = PeriodicWorkRequestBuilder<NotificationWorker>(
             24, TimeUnit.HOURS
@@ -84,7 +81,7 @@ class ThryveApplication: Application() {
 
         workManager.enqueueUniquePeriodicWork(
             uniqueWorkName,
-            ExistingPeriodicWorkPolicy.REPLACE, // or KEEP, depending on desired behavior
+            ExistingPeriodicWorkPolicy.UPDATE, // Use UPDATE to refresh settings if they change
             periodicWorkRequest
         )
     }

@@ -49,6 +49,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.surfaceColorAtElevation
@@ -157,7 +158,8 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                 onProteinChanged = viewModel::onManualProteinChanged,
                 onCarbsChanged = viewModel::onManualCarbsChanged,
                 onFatChanged = viewModel::onManualFatChanged,
-                onShowFavorites = { viewModel.onShowFavoritesDialog(true) }
+                onShowFavorites = { viewModel.onShowFavoritesDialog(true) },
+                onUseAiToggled = viewModel::onUseAiToggled
             )
         }
 
@@ -469,7 +471,7 @@ fun AiProcessingIndicator(modifier: Modifier = Modifier) {
     ) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Analyzing meal with Gemini AI...",
+            text = "Analyzing meal with AI...",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.Center
@@ -581,7 +583,8 @@ fun LogMealDialog(
     onProteinChanged: (String) -> Unit,
     onCarbsChanged: (String) -> Unit,
     onFatChanged: (String) -> Unit,
-    onShowFavorites: () -> Unit
+    onShowFavorites: () -> Unit,
+    onUseAiToggled: (Boolean) -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -601,15 +604,29 @@ fun LogMealDialog(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                if (uiState.userSettings?.useGeminiForMacros == false) {
-                     OutlinedButton(
-                        onClick = onShowFavorites,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Choose from Favorites")
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = onShowFavorites,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Choose from Favorites")
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Use AI for calculation",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Switch(
+                        checked = uiState.userSettings?.useGeminiForMacros == true,
+                        onCheckedChange = onUseAiToggled
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = uiState.mealInputText,

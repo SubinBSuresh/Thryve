@@ -22,7 +22,7 @@ class PRViewModel @Inject constructor(private val repository: PRRepositoryImpl) 
     val prList: StateFlow<List<PersonalRecord>> = _prList.asStateFlow()
 
 
-    open fun logPersonalRecord(exerciseName: String, weight: Int, reps: Int, date: Timestamp) {
+    open fun logPersonalRecord(exerciseName: String, weight: Double, reps: Int, date: Timestamp) {
         // Run the state update in the ViewModelScope
         viewModelScope.launch {
             val newRecord = PersonalRecord(

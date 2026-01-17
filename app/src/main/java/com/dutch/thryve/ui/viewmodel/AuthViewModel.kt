@@ -1,5 +1,9 @@
 package com.dutch.thryve.ui.viewmodel
 
+import android.content.Context
+import android.util.Log
+import androidx.credentials.CreatePasswordRequest
+import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -51,6 +55,19 @@ class AuthViewModel @Inject constructor() : ViewModel() {
                 _authState.value = AuthState.Success(user.uid)
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.message ?: "An unknown error occurred")
+            }
+        }
+    }
+
+    fun saveCredentials(context: Context, email: String, password: String) {
+        viewModelScope.launch {
+            try {
+                val credentialManager = CredentialManager.create(context)
+                val createPasswordRequest = CreatePasswordRequest(email, password)
+                credentialManager.createCredential(context, createPasswordRequest)
+                Log.d("AuthViewModel", "Credential save request sent successfully")
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Failed to save credentials: ${e.message}")
             }
         }
     }

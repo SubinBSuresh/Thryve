@@ -32,7 +32,7 @@ class FirebaseRepositoryImpl @Inject constructor(
                 querySnapshot.documents.mapNotNull { document ->
                     try {
                         val exerciseName = document.getString("exerciseName") ?: ""
-                        val weight = document.getLong("weight")?.toInt() ?: 0
+                        val weight = document.getLong("weight")?.toDouble() ?: 0.0
                         val reps = document.getLong("reps")?.toInt() ?: 0
 
                         val dateObject = document.get("date")

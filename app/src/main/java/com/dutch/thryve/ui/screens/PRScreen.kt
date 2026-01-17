@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -167,7 +168,7 @@ fun ExercisePRsItem(
 fun ProgressReportDialog(
     recordToEdit: PersonalRecord?,
     onDismissRequest: () -> Unit,
-    onSave: (exercise: Exercise, weight: Int, reps: Int) -> Unit
+    onSave: (exercise: Exercise, weight: Double, reps: Int) -> Unit
 ) {
     val isEditing = recordToEdit != null
     val title = if (isEditing) "Edit Personal Record" else "Log New Personal Record"
@@ -200,7 +201,7 @@ fun ProgressReportDialog(
     var categoryExpanded by remember { mutableStateOf(false) }
     var exerciseExpanded by remember { mutableStateOf(false) }
 
-    val isValid = selectedExercise != null && weightInput.toIntOrNull() != null && repsInput.toIntOrNull() != null
+    val isValid = selectedExercise != null && weightInput.toDoubleOrNull() != null && repsInput.toIntOrNull() != null
 
     AlertDialog(onDismissRequest = onDismissRequest, title = { Text(title) }, text = {
         Column {
@@ -274,9 +275,13 @@ fun ProgressReportDialog(
             ) {
                 OutlinedTextField(
                     value = weightInput,
-                    onValueChange = { weightInput = it.filter { char -> char.isDigit() } },
+                    onValueChange = { input ->
+                        if (input.isEmpty() || input.matches(Regex("""^\d*\.?\d{0,1}$"""))) {
+                            weightInput = input
+                        }
+                    },
                     label = { Text("Weight (kg)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.weight(1f)
                 )
                 OutlinedTextField(
@@ -299,7 +304,7 @@ fun ProgressReportDialog(
         Button(
             onClick = {
                 if (isValid) {
-                    onSave(selectedExercise!!, weightInput.toInt(), repsInput.toInt())
+                    onSave(selectedExercise!!, weightInput.toDouble(), repsInput.toInt())
                 }
             }, enabled = isValid
         ) {

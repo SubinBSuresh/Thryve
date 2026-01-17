@@ -41,23 +41,23 @@ data class OpenAIMessage(
 data class OpenAIRequest(
     val model: String,
     val messages: List<OpenAIMessage>,
-    val response_format: ResponseSchema
+    val response_format: OpenAIResponseSchema
 )
 
 @Serializable
-data class ResponseSchema(
+data class OpenAIResponseSchema(
     val type: String = "json_schema",
-    val json_schema: ResponseSchemaDef
+    val json_schema: OpenAIResponseSchemaDef
 )
 
 @Serializable
-data class ResponseSchemaDef(
+data class OpenAIResponseSchemaDef(
     val name: String = "meal_analysis",
-    val schema: AnalysisSchema
+    val schema: OpenAIAnalysisSchema
 )
 
 @Serializable
-data class AnalysisSchema(
+data class OpenAIAnalysisSchema(
     val type: String = "object",
     val properties: Map<String, GeminiProperty>,
     val required: List<String>
@@ -84,7 +84,7 @@ data class OutputItem(
 )
 
 @Serializable
-data class AnalysisResult(
+data class OpenAIAnalysisResult(
     val description: String,
     val calories: Int,
     val protein: Int,
@@ -102,7 +102,7 @@ class OpenAIService @Inject constructor() {
     private val client = OkHttpClient()
 
     // JSON schema for OpenAI
-    private val schema = AnalysisSchema(
+    private val schema = OpenAIAnalysisSchema(
         properties = mapOf(
             "description" to GeminiProperty("string", "clean description"),
             "calories" to GeminiProperty("integer", "calories"),
@@ -131,8 +131,8 @@ class OpenAIService @Inject constructor() {
                 OpenAIMessage("system", systemPrompt),
                 OpenAIMessage("user", "Analyze: $meal")
             ),
-            response_format = ResponseSchema(
-                json_schema = ResponseSchemaDef(schema = schema)
+            response_format = OpenAIResponseSchema(
+                json_schema = OpenAIResponseSchemaDef(schema = schema)
             )
         )
 

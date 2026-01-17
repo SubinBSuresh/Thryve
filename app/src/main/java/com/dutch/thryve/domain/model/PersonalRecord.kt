@@ -6,7 +6,7 @@ data class PersonalRecord(
     val id: String = "",
     val exerciseId: String = "",
     val exerciseName: String = "", // Keep for display purposes, but don't rely on it for logic
-    val weight: Int = 0,
+    val weight: Double = 0.0,
     val reps: Int = 0,
     val date: Timestamp = Timestamp.now()
 )

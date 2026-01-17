@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.dutch.thryve.ai.GeminiService
 import com.dutch.thryve.ai.OpenAIMessage
 import com.dutch.thryve.ai.OpenAIService
+import com.dutch.thryve.ai.OpenRouterService
 import com.dutch.thryve.data.repository.FirebaseRepositoryImpl
 import com.dutch.thryve.domain.model.DailySummary
 import com.dutch.thryve.domain.model.MealLog
@@ -33,7 +34,8 @@ import javax.inject.Inject
 class DailyViewModel @Inject constructor(
     private val firebaseRepository: FirebaseRepositoryImpl,
     private val geminiService: GeminiService,
-    private val openAIService: OpenAIService
+    private val openAIService: OpenAIService,
+    private val openRouterService: OpenRouterService
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
@@ -235,8 +237,8 @@ class DailyViewModel @Inject constructor(
             try {
                 val date = uiState.value.selectedDate
 //                val mealLog = geminiService.analyzeMeal(mealDescription, date)
-                val mealLog = openAIService.analyzeMeal(mealDescription, date)
-
+//                val mealLog = openAIService.analyzeMeal(mealDescription, date)
+                val mealLog = openRouterService.analyzeMeal(mealDescription, date)
 
                 if (mealLog != null) {
                     val finalMealLog = mealLog.copy(
@@ -272,6 +274,15 @@ class DailyViewModel @Inject constructor(
             }
         } else {
              _uiState.update { it.copy(showInputDialog = true) }
+        }
+    }
+
+    fun onUseAiToggled(enabled: Boolean) {
+        val userId = auth.currentUser?.uid ?: return
+        val currentSettings = _uiState.value.userSettings ?: UserSettings()
+        val updatedSettings = currentSettings.copy(useGeminiForMacros = enabled)
+        viewModelScope.launch {
+            firebaseRepository.saveUserSettings(updatedSettings, userId)
         }
     }
 
