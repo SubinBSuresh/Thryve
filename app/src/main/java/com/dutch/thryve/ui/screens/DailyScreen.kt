@@ -8,18 +8,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -31,47 +20,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.surfaceColorAtElevation
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -95,11 +53,12 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) },
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             if (!uiState.isAwaitingAi) {
                 FloatingActionButton(
-                    onClick = { viewModel.onAddMealClicked() },
+                    onClick = viewModel::onAddMealClicked,
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = RoundedCornerShape(16.dp)
@@ -107,7 +66,8 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                     Icon(Icons.Filled.Add, "Log Meal")
                 }
             }
-        }) { paddingValues ->
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -118,15 +78,14 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                 selectedDate = uiState.selectedDate,
                 onDateSelected = viewModel::updateSelectedDate
             )
+            
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                CaloriesCard(uiState.dailySummary)
-                MacrosCard(uiState.dailySummary)
+                DailySummaryCard(uiState.dailySummary)
 
                 AnimatedContent(
                     targetState = uiState.isAwaitingAi,
@@ -134,15 +93,18 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                     label = "meal_log_content_animation"
                 ) { isAwaitingAi ->
                     if (isAwaitingAi) {
-                        AiProcessingIndicator(modifier = Modifier.fillMaxWidth())
+                        AiProcessingIndicator()
                     } else if (uiState.mealLogs.isNotEmpty()) {
-                        MealLogList(uiState.mealLogs,
-                            onEdit = { viewModel.onEditMealClicked(it) },
-                            onDelete = { viewModel.onDeleteMealClicked(it) },
-                            onToggleFavorite = { viewModel.onToggleFavorite(it) },
-                            modifier = Modifier.weight(1f))
+                        MealLogList(
+                            logs = uiState.mealLogs,
+                            onEdit = viewModel::onEditMealClicked,
+                            onDelete = viewModel::onDeleteMealClicked,
+                            onToggleFavorite = viewModel::onToggleFavorite
+                        )
                     } else {
-                        Spacer(Modifier.weight(1f))
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No meals logged for this day", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }
@@ -152,7 +114,7 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
             LogMealDialog(
                 uiState = uiState,
                 onDismiss = { viewModel.toggleInputDialog(false) },
-                onLog = { viewModel.logOrUpdateMeal() },
+                onLog = viewModel::logOrUpdateMeal,
                 onTextChange = viewModel::updateMealInputText,
                 onCaloriesChanged = viewModel::onManualCaloriesChanged,
                 onProteinChanged = viewModel::onManualProteinChanged,
@@ -167,16 +129,16 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
             FavoriteMealsDialog(
                 favorites = uiState.favoriteMeals,
                 onDismiss = { viewModel.onShowFavoritesDialog(false) },
-                onSelect = { 
-                    viewModel.onFavoriteMealSelected(it)
-                }
+                onSelect = viewModel::onFavoriteMealSelected
             )
         }
 
         uiState.mealToDelete?.let { meal ->
-            DeleteConfirmationDialog(onConfirm = { viewModel.onConfirmDelete() },
-                onDismiss = { viewModel.onDismissDeleteDialog() },
-                mealDescription = meal.description)
+            DeleteConfirmationDialog(
+                onConfirm = viewModel::onConfirmDelete,
+                onDismiss = viewModel::onDismissDeleteDialog,
+                mealDescription = meal.description
+            )
         }
 
         uiState.error?.let { errorMessage ->
@@ -189,38 +151,34 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
 }
 
 @Composable
-fun DateSelectorRow(
-    selectedDate: LocalDate,
-    onDateSelected: (LocalDate) -> Unit
-) {
+fun DateSelectorRow(selectedDate: LocalDate, onDateSelected: (LocalDate) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
     val today = LocalDate.now()
-    val dates = remember {
-        (-7..7).map { today.plusDays(it.toLong()) } // Show a range of dates
-    }
+    
+    // Create a much larger range of dates (approx 1 year back and forth)
+    val dates = remember { (-365..365).map { today.plusDays(it.toLong()) } }
     val listState = rememberLazyListState()
 
-    LaunchedEffect(Unit) {
-        val todayIndex = dates.indexOf(today)
-        if (todayIndex != -1) {
+    // Scroll to selected date when the screen first opens or when date changes externally
+    LaunchedEffect(selectedDate) {
+        val index = dates.indexOf(selectedDate)
+        if (index != -1) {
             coroutineScope.launch {
-                listState.scrollToItem(todayIndex - 2) // Center today's date
+                listState.animateScrollToItem(maxOf(0, index - 2))
             }
         }
     }
 
     LazyRow(
         state = listState,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
         items(dates) { date ->
             DateSelectionCard(
-                date = date,
-                isSelected = date == selectedDate,
+                date = date, 
+                isSelected = date == selectedDate, 
                 onDateSelected = onDateSelected
             )
         }
@@ -228,280 +186,93 @@ fun DateSelectorRow(
 }
 
 @Composable
-fun DateSelectionCard(
-    date: LocalDate,
-    isSelected: Boolean,
-    onDateSelected: (LocalDate) -> Unit
-) {
+fun DateSelectionCard(date: LocalDate, isSelected: Boolean, onDateSelected: (LocalDate) -> Unit) {
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
     val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
 
     Card(
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        modifier = Modifier
-            .width(60.dp)
-            .height(80.dp)
-            .clickable { onDateSelected(date) }
+        modifier = Modifier.width(60.dp).height(80.dp).clickable { onDateSelected(date) }
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(vertical = 8.dp),
+            modifier = Modifier.fillMaxSize().padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
-                style = MaterialTheme.typography.labelSmall,
-                color = contentColor
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                color = contentColor
-            )
+            val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+            Text(dayName, style = MaterialTheme.typography.labelSmall, color = contentColor)
+            Spacer(Modifier.height(4.dp))
+            Text(date.dayOfMonth.toString(), style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = contentColor)
         }
     }
 }
 
 @Composable
-fun CaloriesCard(dailySummary: DailySummary) {
+fun DailySummaryCard(dailySummary: DailySummary) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
-        )
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                    Text("Remaining", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = dailySummary.remainingCalories.toString(),
+                            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Black, fontSize = 36.sp),
+                            color = if (dailySummary.remainingCalories >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
+                        Text(" kcal", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+                    }
+                }
                 Icon(
                     imageVector = Icons.Filled.LocalFireDepartment,
-                    contentDescription = "Calories",
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(24.dp)
+                    contentDescription = null,
+                    tint = if (dailySummary.remainingCalories >= 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
+                    modifier = Modifier.size(48.dp)
                 )
-                Spacer(Modifier.width(9.dp))
-                Text(
-                    text = "Calories",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                if (dailySummary.remainingCalories < 0) {
-                    Box(
-                        modifier = Modifier
-                            .size(4.dp)
-                            .clip(CircleShape)
-                            .background(Color.Red)
-                    )
-                }
             }
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CalorieStat(
-                    value = dailySummary.totalFoodCalories.toString(),
-                    label = "Food",
-                    color = MaterialTheme.colorScheme.error
-                )
-                Divider(
-                    modifier = Modifier
-                        .height(60.dp)
-                        .width(1.dp)
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
-                )
-                CalorieStat(
-                    value = dailySummary.totalExerciseCalories.toString(),
-                    label = "Exercise",
-                    color = MaterialTheme.colorScheme.tertiary
-                )
-                Divider(
-                    modifier = Modifier
-                        .height(60.dp)
-                        .width(1.dp)
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
-                )
-                CalorieStat(
-                    value = dailySummary.remainingCalories.toString(),
-                    label = "Remaining",
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+
+            Divider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                SummaryStat(value = "${dailySummary.totalFoodCalories}", label = "Food", color = MaterialTheme.colorScheme.onSurface)
+                SummaryStat(value = "${dailySummary.currentProtein}g", label = "Protein", color = MaterialTheme.colorScheme.tertiary, target = dailySummary.targetProtein)
+                SummaryStat(value = "${dailySummary.currentCarbs}g", label = "Carbs", color = MaterialTheme.colorScheme.secondary, target = dailySummary.targetCarbs)
+                SummaryStat(value = "${dailySummary.currentFat}g", label = "Fats", color = MaterialTheme.colorScheme.primary, target = dailySummary.targetFat)
             }
         }
     }
 }
 
 @Composable
-fun CalorieStat(value: String, label: String, color: Color) {
+fun SummaryStat(value: String, label: String, color: Color, target: Int = 0) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold)
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-fun MacrosCard(dailySummary: DailySummary) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Filled.PieChart,
-                    contentDescription = "Macros",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "Macros",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+        Text(value, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = color)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (target > 0) {
+            val currentVal = value.filter { it.isDigit() }.toIntOrNull() ?: 0
+            val indicatorColor = when (label) {
+                "Protein" -> if (currentVal >= target) Color.Green else Color.Transparent
+                else -> if (currentVal > target) Color.Red else Color.Transparent
             }
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                MacroGoalStat(
-                    label = "Carbs (g)",
-                    current = dailySummary.currentCarbs,
-                    target = dailySummary.targetCarbs,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Divider(
-                    modifier = Modifier
-                        .height(60.dp)
-                        .width(1.dp)
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
-                )
-                MacroGoalStat(
-                    label = "Protein (g)",
-                    current = dailySummary.currentProtein,
-                    target = dailySummary.targetProtein,
-                    color = MaterialTheme.colorScheme.tertiary
-                )
-                Divider(
-                    modifier = Modifier
-                        .height(60.dp)
-                        .width(1.dp)
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
-                )
-                MacroGoalStat(
-                    label = "Fat (g)",
-                    current = dailySummary.currentFat,
-                    target = dailySummary.targetFat,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            if (indicatorColor != Color.Transparent) {
+                Spacer(Modifier.height(4.dp))
+                Box(Modifier.size(4.dp).clip(CircleShape).background(indicatorColor))
             }
         }
     }
 }
 
 @Composable
-fun MacroGoalStat(label: String, current: Int, target: Int, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = buildAnnotatedString {
-                withStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold)) {
-                    append(current.toString())
-                }
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        fontSize = 14.sp
-                    )
-                ) {
-                    append("/$target")
-                }
-            }, style = MaterialTheme.typography.bodyLarge
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            if (target > 0) { // Only show dot if a target is set
-                val (show, indicatorColor) = when {
-                    label.startsWith("Protein") -> if (current >= target) (true to Color.Green) else (true to Color.Red)
-                    else -> if (current > target) (true to Color.Red) else (true to Color.Green)
-                }
-                if (show) {
-                    Box(modifier = Modifier
-                        .size(4.dp)
-                        .clip(CircleShape)
-                        .background(indicatorColor))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AiProcessingIndicator(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Analyzing meal with AI...",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-fun MealLogList(
-    logs: List<MealLog>,
-    onEdit: (MealLog) -> Unit,
-    onDelete: (MealLog) -> Unit,
-    onToggleFavorite: (MealLog) -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun MealLogList(logs: List<MealLog>, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> Unit, onToggleFavorite: (MealLog) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        Text(
-            text = "Meal Details",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(logs) { log ->
-                MealLogCard(log = log, onEdit = onEdit, onDelete = onDelete, onToggleFavorite = onToggleFavorite)
-            }
+        Text("Meal Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(logs) { log -> MealLogCard(log, onEdit, onDelete, onToggleFavorite) }
         }
     }
 }
@@ -509,49 +280,25 @@ fun MealLogList(
 @Composable
 fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> Unit, onToggleFavorite: (MealLog) -> Unit) {
     var showMenu by remember { mutableStateOf(false) }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = log.description,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
+                Text(log.description, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                 Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More actions")
-                    }
+                    IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, "More") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        DropdownMenuItem(text = { Text("Edit") }, onClick = {
-                            onEdit(log)
-                            showMenu = false
-                        })
-                        DropdownMenuItem(text = { Text("Delete") }, onClick = {
-                            onDelete(log)
-                            showMenu = false
-                        })
-                        val favoriteText = if (log.isFavorite) "Remove from Favorites" else "Save as Favorite"
-                        DropdownMenuItem(text = { Text(favoriteText) }, onClick = {
-                            onToggleFavorite(log)
-                            showMenu = false
-                        })
+                        DropdownMenuItem(text = { Text("Edit") }, onClick = { onEdit(log); showMenu = false })
+                        DropdownMenuItem(text = { Text("Delete") }, onClick = { onDelete(log); showMenu = false })
+                        DropdownMenuItem(text = { Text(if (log.isFavorite) "Remove from Favorites" else "Save as Favorite") }, onClick = { onToggleFavorite(log); showMenu = false })
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                MacroStat("Cal", log.calories.toString(), MaterialTheme.colorScheme.error)
-                MacroStat("Prt", log.protein.toString(), MaterialTheme.colorScheme.tertiary)
-                MacroStat("Carb", log.carbs.toString(), MaterialTheme.colorScheme.secondary)
-                MacroStat("Fat", log.fat.toString(), MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                MacroStat("Cal", "${log.calories}", MaterialTheme.colorScheme.error)
+                MacroStat("Protein", "${log.protein}g", MaterialTheme.colorScheme.tertiary)
+                MacroStat("Carbs", "${log.carbs}g", MaterialTheme.colorScheme.secondary)
+                MacroStat("Fats", "${log.fat}g", MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -560,159 +307,57 @@ fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> 
 @Composable
 fun MacroStat(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Black),
-            color = color
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Text(value, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Black), color = color)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-fun LogMealDialog(
-    uiState: CalendarUiState,
-    onDismiss: () -> Unit,
-    onLog: () -> Unit,
-    onTextChange: (String) -> Unit,
-    onCaloriesChanged: (String) -> Unit,
-    onProteinChanged: (String) -> Unit,
-    onCarbsChanged: (String) -> Unit,
-    onFatChanged: (String) -> Unit,
-    onShowFavorites: () -> Unit,
-    onUseAiToggled: (Boolean) -> Unit
-) {
+fun LogMealDialog(uiState: CalendarUiState, onDismiss: () -> Unit, onLog: () -> Unit, onTextChange: (String) -> Unit, onCaloriesChanged: (String) -> Unit, onProteinChanged: (String) -> Unit, onCarbsChanged: (String) -> Unit, onFatChanged: (String) -> Unit, onShowFavorites: () -> Unit, onUseAiToggled: (Boolean) -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp), shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                val title = if (uiState.mealToEdit != null) "Edit Meal" else "Log Meal"
-                Text(
-                    text = title + " for ${DATE_FORMATTER_HEADER.format(uiState.selectedDate)}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                OutlinedButton(
-                    onClick = onShowFavorites,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Choose from Favorites")
+        Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(16.dp)) {
+            Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("${if (uiState.mealToEdit != null) "Edit" else "Log"} Meal for ${DATE_FORMATTER_HEADER.format(uiState.selectedDate)}", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(16.dp))
+                OutlinedButton(onClick = onShowFavorites, modifier = Modifier.fillMaxWidth()) { Text("Choose from Favorites") }
+                Spacer(Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Use AI for calculation", style = MaterialTheme.typography.bodyMedium)
+                    Switch(checked = uiState.userSettings?.useGeminiForMacros == true, onCheckedChange = onUseAiToggled)
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Use AI for calculation",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Switch(
-                        checked = uiState.userSettings?.useGeminiForMacros == true,
-                        onCheckedChange = onUseAiToggled
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = uiState.mealInputText,
-                    onValueChange = onTextChange,
-                    label = { Text("What did you eat?") },
-                    placeholder = { Text("e.g., A large pepperoni pizza and a soda") },
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(value = uiState.mealInputText, onValueChange = onTextChange, label = { Text("What did you eat?") }, placeholder = { Text("e.g., A large pepperoni pizza") }, keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences), modifier = Modifier.fillMaxWidth())
                 if (uiState.userSettings?.useGeminiForMacros == false) {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = uiState.manualCalories,
-                            onValueChange = onCaloriesChanged,
-                            label = { Text("Cals") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = uiState.manualProtein,
-                            onValueChange = onProteinChanged,
-                            label = { Text("Prt (g)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
+                        OutlinedTextField(value = uiState.manualCalories, onValueChange = onCaloriesChanged, label = { Text("Cals") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = uiState.manualProtein, onValueChange = onProteinChanged, label = { Text("Protein") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = uiState.manualCarbs,
-                            onValueChange = onCarbsChanged,
-                            label = { Text("Carbs (g)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = uiState.manualFat,
-                            onValueChange = onFatChanged,
-                            label = { Text("Fat (g)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
+                        OutlinedTextField(value = uiState.manualCarbs, onValueChange = onCarbsChanged, label = { Text("Carbs") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = uiState.manualFat, onValueChange = onFatChanged, label = { Text("Fats") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
                     }
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = onLog,
-                    enabled = uiState.mealInputText.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    val buttonText = if (uiState.mealToEdit != null) {
-                        if (uiState.userSettings?.useGeminiForMacros == true) "Update & Re-analyze" else "Update"
-                    } else {
-                        if (uiState.userSettings?.useGeminiForMacros == true) "Analyze & Log" else "Log"
-                    }
-                    Text(buttonText)
+                Spacer(Modifier.height(24.dp))
+                Button(onClick = onLog, enabled = uiState.mealInputText.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                    Text(if (uiState.mealToEdit != null) (if (uiState.userSettings?.useGeminiForMacros == true) "Update & Re-analyze" else "Update") else (if (uiState.userSettings?.useGeminiForMacros == true) "Analyze & Log" else "Log"))
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
             }
         }
     }
 }
 
 @Composable
-fun FavoriteMealsDialog(
-    favorites: List<MealLog>,
-    onDismiss: () -> Unit,
-    onSelect: (MealLog) -> Unit
-) {
+fun FavoriteMealsDialog(favorites: List<MealLog>, onDismiss: () -> Unit, onSelect: (MealLog) -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Card(shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Choose a Favorite", style = MaterialTheme.typography.headlineSmall)
                 Spacer(modifier = Modifier.height(16.dp))
-                if (favorites.isEmpty()) {
-                    Text("You have no favorite meals yet.")
-                } else {
+                if (favorites.isEmpty()) Text("No favorite meals yet.") else {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(favorites) { meal ->
-                            Text(meal.description, modifier = Modifier.clickable { onSelect(meal) }.padding(8.dp).fillMaxWidth())
-                        }
+                        items(favorites) { meal -> Text(meal.description, modifier = Modifier.clickable { onSelect(meal) }.padding(8.dp).fillMaxWidth()) }
                     }
                 }
             }
@@ -721,26 +366,15 @@ fun FavoriteMealsDialog(
 }
 
 @Composable
-fun DeleteConfirmationDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    mealDescription: String
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Confirm Deletion") },
-        text = { Text("Are you sure you want to delete the meal: \"$mealDescription\"?") },
-        confirmButton = {
-            Button(
-                onClick = onConfirm
-            ) {
-                Text("Delete")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
+fun DeleteConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit, mealDescription: String) {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Confirm Deletion") }, text = { Text("Are you sure you want to delete \"$mealDescription\"?") }, confirmButton = { Button(onClick = onConfirm) { Text("Delete") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+}
+
+@Composable
+fun AiProcessingIndicator(modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        CircularProgressIndicator(modifier = Modifier.size(48.dp))
+        Spacer(Modifier.height(16.dp))
+        Text("Analyzing meal with AI...", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+    }
 }

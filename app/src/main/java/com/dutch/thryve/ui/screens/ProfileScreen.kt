@@ -105,7 +105,7 @@ fun ProfileScreen(navController: NavHostController, viewModel: ProfileViewModel 
                     OutlinedTextField(
                         value = uiState.userSettings.targetProtein.toString(),
                         onValueChange = viewModel::onTargetProteinChanged,
-                        label = { Text("Prt (g)") },
+                        label = { Text("Protein (g)") },
                         modifier = Modifier.weight(1f),
                         enabled = uiState.isEditing,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
