@@ -3,6 +3,7 @@ package com.dutch.thryve.data.repository
 import android.util.Log
 import com.dutch.thryve.domain.model.MealLog
 import com.dutch.thryve.domain.model.PersonalRecord
+import com.dutch.thryve.domain.model.Supplement
 import com.dutch.thryve.domain.model.UserSettings
 import com.dutch.thryve.domain.repository.FirebaseRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -32,7 +33,7 @@ class FirebaseRepositoryImpl @Inject constructor(
                 querySnapshot.documents.mapNotNull { document ->
                     try {
                         val exerciseName = document.getString("exerciseName") ?: ""
-                        val weight = document.getLong("weight")?.toDouble() ?: 0.0
+                        val weight = document.get("weight") as? Double ?: (document.get("weight") as? Long)?.toDouble() ?: 0.0
                         val reps = document.getLong("reps")?.toInt() ?: 0
 
                         val dateObject = document.get("date")
@@ -92,7 +93,7 @@ class FirebaseRepositoryImpl @Inject constructor(
 
         return db.collection("users").document(userId).collection("meal_logs")
             .whereGreaterThanOrEqualTo("date", startOfDay)
-            .whereLessThanOrEqualTo("date", endOfDay)
+            .whereLessThanOrEqualTo("date", endOfDay).orderBy("date", Query.Direction.ASCENDING)
             .snapshots()
             .map { querySnapshot ->
                 Log.i("dutch", "Query for date $date returned ${querySnapshot.size()} documents.")
@@ -159,6 +160,28 @@ class FirebaseRepositoryImpl @Inject constructor(
         return db.collection("users").document(userId).collection("settings").document("goals").snapshots().map {
             it.toObject(UserSettings::class.java)
         }
+    }
+
+    override suspend fun saveSupplement(supplement: Supplement, userId: String) {
+        db.collection("users").document(userId).collection("supplements").document(supplement.id).set(supplement).await()
+    }
+
+    override fun getSupplements(userId: String): Flow<List<Supplement>> {
+        return db.collection("users").document(userId).collection("supplements")
+            .snapshots()
+            .map { querySnapshot ->
+                querySnapshot.documents.mapNotNull { document ->
+                    try {
+                        document.toObject(Supplement::class.java)?.copy(id = document.id)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
+    }
+
+    override suspend fun deleteSupplement(supplementId: String, userId: String) {
+        db.collection("users").document(userId).collection("supplements").document(supplementId).delete().await()
     }
 
     override suspend fun initializeFirebase() {

@@ -14,5 +14,6 @@ data class MealLog(
     val carbs: Int = 0,
     val fat: Int = 0,
     @get:PropertyName("isFavorite") @set:PropertyName("isFavorite")
-    var isFavorite: Boolean = false
+    var isFavorite: Boolean = false,
+    val mealType: String = "Other" // Breakfast, Lunch, Dinner, Snack, Other
 )

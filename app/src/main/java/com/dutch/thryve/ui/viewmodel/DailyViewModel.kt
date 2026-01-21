@@ -97,7 +97,7 @@ class DailyViewModel @Inject constructor(
     }
 
     fun onAddMealClicked() {
-        _uiState.update { it.copy(mealToEdit = null, showInputDialog = true, mealInputText = "") }
+        _uiState.update { it.copy(mealToEdit = null, showInputDialog = true, mealInputText = "", selectedMealType = "Other") }
     }
 
     fun onEditMealClicked(mealLog: MealLog) {
@@ -109,7 +109,8 @@ class DailyViewModel @Inject constructor(
                 manualCalories = mealLog.calories.toString(),
                 manualProtein = mealLog.protein.toString(),
                 manualCarbs = mealLog.carbs.toString(),
-                manualFat = mealLog.fat.toString()
+                manualFat = mealLog.fat.toString(),
+                selectedMealType = mealLog.mealType
             ) 
         }
     }
@@ -167,9 +168,14 @@ class DailyViewModel @Inject constructor(
                 manualCalories = meal.calories.toString(),
                 manualProtein = meal.protein.toString(),
                 manualCarbs = meal.carbs.toString(),
-                manualFat = meal.fat.toString()
+                manualFat = meal.fat.toString(),
+                selectedMealType = meal.mealType
             )
         }
+    }
+
+    fun onMealTypeSelected(mealType: String) {
+        _uiState.update { it.copy(selectedMealType = mealType) }
     }
 
     // --- Functions for Manual Entry ---
@@ -216,7 +222,8 @@ class DailyViewModel @Inject constructor(
             protein = state.manualProtein.toIntOrNull() ?: 0,
             carbs = state.manualCarbs.toIntOrNull() ?: 0,
             fat = state.manualFat.toIntOrNull() ?: 0,
-            isFavorite = state.mealToEdit?.isFavorite ?: false
+            isFavorite = state.mealToEdit?.isFavorite ?: false,
+            mealType = state.selectedMealType
         )
 
         viewModelScope.launch {
@@ -231,6 +238,7 @@ class DailyViewModel @Inject constructor(
         if (mealDescription.isBlank()) return
         
         val existingMeal = _uiState.value.mealToEdit
+        val selectedMealType = _uiState.value.selectedMealType
 
         viewModelScope.launch {
             _uiState.update { it.copy(isAwaitingAi = true, showInputDialog = false) }
@@ -244,7 +252,8 @@ class DailyViewModel @Inject constructor(
                     val finalMealLog = mealLog.copy(
                         id = existingMeal?.id ?: mealLog.id,
                         userId = userId,
-                        isFavorite = existingMeal?.isFavorite ?: false
+                        isFavorite = existingMeal?.isFavorite ?: false,
+                        mealType = selectedMealType
                     )
                     firebaseRepository.saveMealLog(finalMealLog, userId)
                 } else {
@@ -254,7 +263,7 @@ class DailyViewModel @Inject constructor(
                 _uiState.update { it.copy(error = e.message ?: "An error occurred.") }
                 Log.e("dutch", "Error analyzing meal", e)
             } finally {
-                _uiState.update { it.copy(isAwaitingAi = false, mealToEdit = null, mealInputText = "") }
+                _uiState.update { it.copy(isAwaitingAi = false, mealToEdit = null, mealInputText = "", selectedMealType = "Other") }
             }
         }
     }
@@ -308,5 +317,6 @@ data class CalendarUiState(
     val manualCalories: String = "",
     val manualProtein: String = "",
     val manualCarbs: String = "",
-    val manualFat: String = ""
+    val manualFat: String = "",
+    val selectedMealType: String = "Other"
 )

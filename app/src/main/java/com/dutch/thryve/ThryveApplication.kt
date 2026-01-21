@@ -56,6 +56,7 @@ class ThryveApplication: Application() {
         scheduleWork(workManager, constraints, "MealReminder_Morning", 8, 0)
         scheduleWork(workManager, constraints, "MealReminder_Lunch", 13, 0)
         scheduleWork(workManager, constraints, "MealReminder_Evening", 19, 0)
+        scheduleWork(workManager, constraints, "MealReminder_Dinner", 23, 0)
     }
 
     private fun scheduleWork(workManager: WorkManager, constraints: Constraints, uniqueWorkName: String, hourOfDay: Int, minuteOfDay: Int) {

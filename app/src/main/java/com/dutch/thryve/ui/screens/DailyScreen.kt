@@ -121,7 +121,8 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
                 onCarbsChanged = viewModel::onManualCarbsChanged,
                 onFatChanged = viewModel::onManualFatChanged,
                 onShowFavorites = { viewModel.onShowFavoritesDialog(true) },
-                onUseAiToggled = viewModel::onUseAiToggled
+                onUseAiToggled = viewModel::onUseAiToggled,
+                onMealTypeSelected = viewModel::onMealTypeSelected
             )
         }
 
@@ -154,12 +155,9 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
 fun DateSelectorRow(selectedDate: LocalDate, onDateSelected: (LocalDate) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
     val today = LocalDate.now()
-    
-    // Create a much larger range of dates (approx 1 year back and forth)
     val dates = remember { (-365..365).map { today.plusDays(it.toLong()) } }
     val listState = rememberLazyListState()
 
-    // Scroll to selected date when the screen first opens or when date changes externally
     LaunchedEffect(selectedDate) {
         val index = dates.indexOf(selectedDate)
         if (index != -1) {
@@ -176,11 +174,7 @@ fun DateSelectorRow(selectedDate: LocalDate, onDateSelected: (LocalDate) -> Unit
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
         items(dates) { date ->
-            DateSelectionCard(
-                date = date, 
-                isSelected = date == selectedDate, 
-                onDateSelected = onDateSelected
-            )
+            DateSelectionCard(date = date, isSelected = date == selectedDate, onDateSelected = onDateSelected)
         }
     }
 }
@@ -283,7 +277,10 @@ fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> 
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(log.description, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = log.mealType, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                    Text(log.description, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
+                }
                 Box {
                     IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, "More") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
@@ -312,22 +309,63 @@ fun MacroStat(label: String, value: String, color: Color) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun LogMealDialog(uiState: CalendarUiState, onDismiss: () -> Unit, onLog: () -> Unit, onTextChange: (String) -> Unit, onCaloriesChanged: (String) -> Unit, onProteinChanged: (String) -> Unit, onCarbsChanged: (String) -> Unit, onFatChanged: (String) -> Unit, onShowFavorites: () -> Unit, onUseAiToggled: (Boolean) -> Unit) {
+fun LogMealDialog(
+    uiState: CalendarUiState, 
+    onDismiss: () -> Unit, 
+    onLog: () -> Unit, 
+    onTextChange: (String) -> Unit, 
+    onCaloriesChanged: (String) -> Unit, 
+    onProteinChanged: (String) -> Unit, 
+    onCarbsChanged: (String) -> Unit, 
+    onFatChanged: (String) -> Unit, 
+    onShowFavorites: () -> Unit, 
+    onUseAiToggled: (Boolean) -> Unit,
+    onMealTypeSelected: (String) -> Unit
+) {
+    val isAiEnabled = uiState.userSettings?.useGeminiForMacros == true
+    val mealTypes = listOf("Breakfast", "Lunch", "Dinner", "Snack", "Other")
+    
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("${if (uiState.mealToEdit != null) "Edit" else "Log"} Meal for ${DATE_FORMATTER_HEADER.format(uiState.selectedDate)}", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(16.dp))
-                OutlinedButton(onClick = onShowFavorites, modifier = Modifier.fillMaxWidth()) { Text("Choose from Favorites") }
+                
+                OutlinedButton(
+                    onClick = onShowFavorites, 
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isAiEnabled
+                ) { 
+                    Text("Choose from Favorites") 
+                }
+                
+                Spacer(Modifier.height(16.dp))
+                
+                Text("Meal Type", style = MaterialTheme.typography.labelMedium, modifier = Modifier.align(Alignment.Start))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    mealTypes.forEach { type ->
+                        FilterChip(
+                            selected = uiState.selectedMealType == type,
+                            onClick = { onMealTypeSelected(type) },
+                            label = { Text(type) }
+                        )
+                    }
+                }
+                
                 Spacer(Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Use AI for calculation", style = MaterialTheme.typography.bodyMedium)
-                    Switch(checked = uiState.userSettings?.useGeminiForMacros == true, onCheckedChange = onUseAiToggled)
+                    Switch(checked = isAiEnabled, onCheckedChange = onUseAiToggled)
                 }
                 Spacer(Modifier.height(16.dp))
                 OutlinedTextField(value = uiState.mealInputText, onValueChange = onTextChange, label = { Text("What did you eat?") }, placeholder = { Text("e.g., A large pepperoni pizza") }, keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences), modifier = Modifier.fillMaxWidth())
-                if (uiState.userSettings?.useGeminiForMacros == false) {
+                if (!isAiEnabled) {
                     Spacer(Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(value = uiState.manualCalories, onValueChange = onCaloriesChanged, label = { Text("Cals") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
@@ -340,7 +378,7 @@ fun LogMealDialog(uiState: CalendarUiState, onDismiss: () -> Unit, onLog: () -> 
                 }
                 Spacer(Modifier.height(24.dp))
                 Button(onClick = onLog, enabled = uiState.mealInputText.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
-                    Text(if (uiState.mealToEdit != null) (if (uiState.userSettings?.useGeminiForMacros == true) "Update & Re-analyze" else "Update") else (if (uiState.userSettings?.useGeminiForMacros == true) "Analyze & Log" else "Log"))
+                    Text(if (uiState.mealToEdit != null) (if (isAiEnabled) "Update & Re-analyze" else "Update") else (if (isAiEnabled) "Analyze & Log" else "Log"))
                 }
                 TextButton(onClick = onDismiss) { Text("Cancel") }
             }

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocalDining
+import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -100,9 +101,10 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Settings : Screen("settings", "Settings", Icons.Default.Settings)
     object PR : Screen("pr", "PR", Icons.Default.EmojiEvents)
     object Profile : Screen("profile", "Profile", Icons.Default.Person)
+    object Supplements : Screen("supplements", "Supplements",Icons.Default.Medication)
 }
 
-val bottomNavItems = listOf(Screen.Dashboard, Screen.Nutrition, Screen.PR, Screen.Profile)
+val bottomNavItems = listOf(Screen.Dashboard, Screen.Nutrition, Screen.PR, Screen.Supplements, Screen.Profile)
 
 @Composable
 fun MainScreen() {
@@ -183,6 +185,7 @@ fun MainScreen() {
             composable(Screen.Nutrition.route) { DailyScreen(navController) }
             composable(Screen.PR.route) { PRScreen(navController) }
             composable(Screen.Profile.route) { ProfileScreen(navController) }
+            composable(Screen.Supplements.route) {SupplementsScreen()}
         }
     }
 }

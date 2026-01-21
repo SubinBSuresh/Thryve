@@ -2,6 +2,7 @@ package com.dutch.thryve.domain.repository
 
 import com.dutch.thryve.domain.model.MealLog
 import com.dutch.thryve.domain.model.PersonalRecord
+import com.dutch.thryve.domain.model.Supplement
 import com.dutch.thryve.domain.model.UserSettings
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
@@ -21,6 +22,10 @@ interface FirebaseRepository {
 
     suspend fun saveUserSettings(userSettings: UserSettings, userId: String)
     fun getUserSettings(userId: String): Flow<UserSettings?>
+
+    suspend fun saveSupplement(supplement: Supplement, userId: String)
+    fun getSupplements(userId: String): Flow<List<Supplement>>
+    suspend fun deleteSupplement(supplementId: String, userId: String)
 
     suspend fun initializeFirebase()
 }
