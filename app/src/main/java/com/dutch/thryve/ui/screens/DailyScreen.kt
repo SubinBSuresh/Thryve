@@ -82,7 +82,7 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 DailySummaryCard(uiState.dailySummary)
@@ -130,7 +130,9 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
             FavoriteMealsDialog(
                 favorites = uiState.favoriteMeals,
                 onDismiss = { viewModel.onShowFavoritesDialog(false) },
-                onSelect = viewModel::onFavoriteMealSelected
+                onSelect = { 
+                    viewModel.onFavoriteMealSelected(it)
+                }
             )
         }
 
@@ -264,9 +266,11 @@ fun SummaryStat(value: String, label: String, color: Color, target: Int = 0) {
 @Composable
 fun MealLogList(logs: List<MealLog>, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> Unit, onToggleFavorite: (MealLog) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        Text("Meal Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
-        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Meal Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+        LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(logs) { log -> MealLogCard(log, onEdit, onDelete, onToggleFavorite) }
+            // Add a spacer at the bottom to ensure the FAB doesn't hide the last item
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 }
@@ -358,12 +362,12 @@ fun LogMealDialog(
                     }
                 }
                 
-                Spacer(Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Use AI for calculation", style = MaterialTheme.typography.bodyMedium)
                     Switch(checked = isAiEnabled, onCheckedChange = onUseAiToggled)
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(value = uiState.mealInputText, onValueChange = onTextChange, label = { Text("What did you eat?") }, placeholder = { Text("e.g., A large pepperoni pizza") }, keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences), modifier = Modifier.fillMaxWidth())
                 if (!isAiEnabled) {
                     Spacer(Modifier.height(16.dp))

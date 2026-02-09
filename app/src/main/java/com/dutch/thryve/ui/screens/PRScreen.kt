@@ -441,6 +441,8 @@ fun PRScreen(
                             }
                         )
                     }
+                    // Add a spacer at the bottom to ensure the FAB doesn't hide the last item
+                    item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
             }
 
