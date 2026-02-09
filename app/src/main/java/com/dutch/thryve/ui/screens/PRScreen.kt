@@ -58,6 +58,7 @@ import com.dutch.thryve.domain.model.Exercise
 import com.dutch.thryve.domain.model.ExerciseProvider
 import com.dutch.thryve.domain.model.PersonalRecord
 import com.dutch.thryve.ui.viewmodel.FirebaseViewModel
+import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -447,14 +448,15 @@ fun PRScreen(
                 val currentRecordToEdit = recordToEdit
                 ProgressReportDialog(recordToEdit = currentRecordToEdit, onDismissRequest = { showEditDialog = false }, onSave = { exercise, weight, reps ->
                     if (currentRecordToEdit != null) {
-                        val updatedRecord = currentRecordToEdit.copy(weight = weight, reps = reps)
+                        val updatedRecord = currentRecordToEdit.copy(weight = weight, reps = reps, date = Timestamp.now())
                         firebaseViewModel.updatePersonalRecord(updatedRecord)
                     } else {
                         val newRecord = PersonalRecord(
                             exerciseId = exercise.id,
                             exerciseName = exercise.name,
                             weight = weight,
-                            reps = reps
+                            reps = reps,
+                            date = Timestamp.now()
                         )
                         firebaseViewModel.logPersonalRecord(newRecord)
                     }

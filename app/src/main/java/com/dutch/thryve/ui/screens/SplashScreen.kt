@@ -5,10 +5,15 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,33 +24,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.dutch.thryve.R
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(navController: NavHostController) {
     val TAG = "Dutch__SplashScreen"
-    var isTitleVisible by remember { mutableStateOf(false) }
+    var isVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        isTitleVisible = true
-        delay(2000) // Keep splash visible for 2 seconds
+        isVisible = true
+        delay(2000)
 
         val auth = FirebaseAuth.getInstance()
         val currentUser = auth.currentUser
 
         if (currentUser != null) {
-            // User is already logged in, navigate to Nutrition
-            Log.i(TAG, "User already logged in: ${currentUser.uid}")
-            navController.navigate(Screen.Nutrition.route) {
+            navController.navigate(Screen.Dashboard.route) {
                 popUpTo(Screen.Splash.route) { inclusive = true }
             }
         } else {
-            // No user is logged in, navigate to Login
-            Log.i(TAG, "No user logged in, navigating to LoginScreen")
             navController.navigate(Screen.Login.route) {
                 popUpTo(Screen.Splash.route) { inclusive = true }
             }
@@ -55,21 +60,32 @@ fun SplashScreen(navController: NavHostController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.primary),
+            .background(Color(0xFF111315)),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         AnimatedVisibility(
-            visible = isTitleVisible,
-            enter = fadeIn(animationSpec = tween(1500)),
+            visible = isVisible,
+            enter = fadeIn(animationSpec = tween(1000)),
             exit = fadeOut()
         ) {
-            Text(
-                text = "THRYVE",
-                fontSize = 56.sp,
-                color = MaterialTheme.colorScheme.onPrimary,
-                fontWeight = FontWeight.Bold
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    contentDescription = "Thryve Logo",
+                    modifier = Modifier.size(180.dp)
+                )
+                
+                Text(
+                    text = "THRYVE",
+                    modifier = Modifier.offset(y = (-20).dp),
+                    fontSize = 42.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    // -1% letter spacing for a tighter, cleaner look
+                    letterSpacing = (-0.42).sp 
+                )
+            }
         }
     }
 }
