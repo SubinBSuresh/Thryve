@@ -20,7 +20,10 @@ import javax.inject.Inject
 
 private const val API_KEY = BuildConfig.OPENROUTER_SECRET_KEY // Reusing this key for OpenRouter
 private const val API_URL = "https://openrouter.ai/api/v1/chat/completions"
-private const val MODEL = "mistralai/devstral-2512:free" // Or deepseek/deepseek-chat
+//private const val MODEL = "mistralai/devstral-2512:free" // Or deepseek/deepseek-chat
+private const val MODEL = "liquid/lfm-2.5-1.2b-thinking:free" // Or deepseek/deepseek-chat
+//private const val MODEL = "meta-llama/llama-3.3-70b-instruct:free" // Or deepseek/deepseek-chat
+//private const val MODEL = "google/gemma-3n-e2b-it:free"
 
 @Serializable
 data class OpenRouterMessage(

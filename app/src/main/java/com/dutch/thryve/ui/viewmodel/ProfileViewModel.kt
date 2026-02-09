@@ -24,6 +24,7 @@ data class ProfileScreenState(
     val isEditing: Boolean = false,
     val isSaved: Boolean = false,
     val showExportDialog: Boolean = false,
+    val showApiKeyDialog: Boolean = false,
     val exportMessage: String? = null,
     val dataToCopy: String? = null
 )
@@ -117,6 +118,17 @@ class ProfileViewModel @Inject constructor(
 
     fun setShowExportDialog(show: Boolean) {
         _uiState.update { it.copy(showExportDialog = show) }
+    }
+
+    fun setShowApiKeyDialog(show: Boolean) {
+        _uiState.update { it.copy(showApiKeyDialog = show) }
+    }
+
+    fun saveApiKey(apiKey: String) {
+        // Here you would save the API key, e.g. to encrypted shared preferences or DataStore
+        // For now, let's just log it and show a success message
+        Log.d("THRYVE_DEV", "Saving API Key: $apiKey")
+        _uiState.update { it.copy(showApiKeyDialog = false, exportMessage = "API Key saved (logged)") }
     }
 
     fun exportData(options: ExportOptions) {

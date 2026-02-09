@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -125,6 +126,7 @@ fun WeekSelector(
 
 @Composable
 fun WeeklyProgressCard(current: Int, goal: Int) {
+    val remaining = goal - current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -156,6 +158,13 @@ fun WeeklyProgressCard(current: Int, goal: Int) {
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text("kcal consumed", style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = if (remaining >= 0) "$remaining kcal left" else "${-remaining} kcal over",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (remaining >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }
@@ -177,9 +186,9 @@ fun DailyAverageCard(summary: WeeklySummary) {
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 DashboardStatItem("${summary.avgCalories}", "kcal", "Energy")
-                DashboardStatItem("${summary.avgProtein}g", "Prt", "Build")
-                DashboardStatItem("${summary.avgCarbs}g", "Carb", "Fuel")
-                DashboardStatItem("${summary.avgFat}g", "Fat", "Health")
+                DashboardStatItem("${summary.avgProtein}g", "Protein", "Build")
+                DashboardStatItem("${summary.avgCarbs}g", "Carbs", "Fuel")
+                DashboardStatItem("${summary.avgFat}g", "Fats", "Health")
             }
         }
     }

@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.RingtoneManager
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -71,7 +72,15 @@ class NotificationWorker(appContext: Context, workerParams: WorkerParameters) : 
         val channelId = "meal_reminder_channel"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "Meal Reminders", NotificationManager.IMPORTANCE_DEFAULT)
+            val channel = NotificationChannel(
+                channelId, 
+                "Meal Reminders", 
+                NotificationManager.IMPORTANCE_HIGH // Ensure it pops up and makes sound
+            ).apply {
+                description = "Reminders to log your meals and track supplements"
+                enableLights(true)
+                enableVibration(true)
+            }
             notificationManager.createNotificationChannel(channel)
         }
 
@@ -86,18 +95,22 @@ class NotificationWorker(appContext: Context, workerParams: WorkerParameters) : 
             "\n\nLow Stock: ${lowStockSupplements.joinToString(", ")}"
         } else ""
 
+        val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
         val notification = NotificationCompat.Builder(applicationContext, channelId)
             .setSmallIcon(R.drawable.ic_meal_notification)
             .setContentTitle("Time to Log Your Meal!")
             .setStyle(NotificationCompat.BigTextStyle().bigText(baseMessage + supplementMessage))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH) // Match high importance
+            .setSound(defaultSoundUri)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
 
         // Use unique ID so multiple reminders don't overwrite each other
         notificationManager.notify(System.currentTimeMillis().toInt(), notification)
-        Log.d("THRYVE", "NotificationWorker: Notification sent")
+        Log.d("THRYVE", "NotificationWorker: Notification sent successfully")
 
         return Result.success()
     }

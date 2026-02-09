@@ -1,14 +1,9 @@
 package com.dutch.thryve.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import android.util.Log
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -37,6 +32,8 @@ fun ProfileScreen(navController: NavHostController, viewModel: ProfileViewModel 
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager = LocalClipboardManager.current
+    
+    var profileTapCount by remember { mutableStateOf(0) }
 
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) {
@@ -71,12 +68,27 @@ fun ProfileScreen(navController: NavHostController, viewModel: ProfileViewModel 
             if (uiState.isLoading) {
                 CircularProgressIndicator()
             } else {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier.size(120.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            profileTapCount++
+                            if (profileTapCount >= 8) {
+                                viewModel.setShowApiKeyDialog(true)
+                                profileTapCount = 0
+                            }
+                        }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier.fillMaxSize(),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -169,7 +181,48 @@ fun ProfileScreen(navController: NavHostController, viewModel: ProfileViewModel 
                 onExport = { viewModel.exportData(it) }
             )
         }
+
+        if (uiState.showApiKeyDialog) {
+            ApiKeyDialog(
+                onDismiss = { viewModel.setShowApiKeyDialog(false) },
+                onSave = { viewModel.saveApiKey(it) }
+            )
+        }
     }
+}
+
+@Composable
+fun ApiKeyDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var apiKey by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Developer: Set API Key") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Enter the API key to use for AI services.", style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it },
+                    label = { Text("API Key") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(apiKey) },
+                enabled = apiKey.isNotBlank()
+            ) {
+                Text("Save Key")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -195,7 +248,7 @@ fun ExportDataDialog(onDismiss: () -> Unit, onExport: (ExportOptions) -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Duration:", style = MaterialTheme.typography.titleSmall)
-                ExportDuration.values().forEach { duration ->
+                ExportDuration.entries.forEach { duration ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
