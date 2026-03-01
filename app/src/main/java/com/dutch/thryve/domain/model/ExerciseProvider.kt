@@ -3,13 +3,13 @@ package com.dutch.thryve.domain.model
 object ExerciseProvider {
     val exercises = listOf(
         // Abs
-//        Exercise(id = "plank", name = "Plank", category = "Abs"),
-//        Exercise(id = "crunches", name = "Crunches", category = "Abs"),
-//        Exercise(id = "leg_raises", name = "Leg Raises", category = "Abs"),
-//        Exercise(id = "hanging_leg_raises", name = "Hanging Leg Raises", category = "Abs"),
+        Exercise(id = "plank", name = "Plank", category = "Abs"),
+        Exercise(id = "crunches", name = "Crunches", category = "Abs"),
+        Exercise(id = "leg_raises", name = "Leg Raises", category = "Abs"),
+        Exercise(id = "hanging_leg_raises", name = "Hanging Leg Raises", category = "Abs"),
 
         // Back
-//        Exercise(id = "barbell_row", name = "Barbell Row", category = "Back"),
+        Exercise(id = "barbell_row", name = "Barbell Row", category = "Back"),
         Exercise(id = "cable_machine_row_close_grip", name = "Cable Machine Row Close Grip", category = "Back"),
         Exercise(id = "cable_machine_row_vbar", name = "Cable Machine Row V-Bar", category = "Back"),
 //        Exercise(id = "chin_up", name = "Chin-up", category = "Back"),
@@ -25,6 +25,7 @@ object ExerciseProvider {
         Exercise(id = "cable_bicep_curls", name = "Cable Bicep Curls", category = "Bicep"),
         Exercise(id = "concentration_curls", name = "Concentration Curls", category = "Bicep"),
         Exercise(id = "dumbbell_curl", name = "Dumbbell Curl", category = "Bicep"),
+        Exercise(id = "inclined_dumbbell_curl", name = "Inclined Dumbbell Curl", category = "Bicep"),
         Exercise(id = "hammer_curls", name = "Hammer Curls", category = "Bicep"),
         Exercise(id = "preacher_curls_machine", name = "Preacher Curls Machine", category = "Bicep"),
         Exercise(id = "preacher_curls_dumbbell", name = "Preacher Curls Dumbbell", category = "Bicep"),
@@ -32,9 +33,12 @@ object ExerciseProvider {
 
         // Chest
         Exercise(id = "cable_crossovers", name = "Cable Crossovers", category = "Chest"),
-        Exercise(id = "cable_fly", name = "Cable Fly", category = "Chest"),
+        Exercise(id = "cable_fly", name = "Cable Fly High to Low", category = "Chest"),
+        Exercise(id = "cable_fly_2", name = "Cable Fly Low to High", category = "Chest"),
+        Exercise(id = "dumbbell_fly", name = "Dumbbell fly", category = "Chest"),
         Exercise(id = "dips", name = "Dips", category = "Chest"),
-        Exercise(id = "dumbbell_chest_press", name = "Dumbbell Chest Press", category = "Chest"),
+        Exercise(id = "dumbbell_chest_press", name = "Inclined Dumbbell Chest Press", category = "Chest"),
+        Exercise(id = "dumbbell_chest_press_flat", name = "Flat Bench Dumbbell Chest Press", category = "Chest"),
         Exercise(id = "flat_bench_press", name = "Flat Bench Press", category = "Chest"),
         Exercise(id = "inclined_bench_press", name = "Inclined Bench Press", category = "Chest"),
         Exercise(id = "peck_deck_machine", name = "Peck Deck Machine", category = "Chest"),
