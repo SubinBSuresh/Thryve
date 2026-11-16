@@ -21,7 +21,7 @@ import java.util.UUID
 
 
 private const val API_KEY = BuildConfig.GEMINI_API_KEY
-private const val GEMINI_MODEL = "gemini-3.5-flash"
+private const val GEMINI_MODEL = "gemini-2.5-flash"
 // Using v1beta for better support of systemInstruction and responseSchema
 private const val API_URL = "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent?key=$API_KEY"
 
@@ -134,7 +134,6 @@ class GeminiService @Inject constructor() {
     """.trimIndent()
 
     suspend fun analyzeMeal(mealDescription: String, date: LocalDate): MealLog? {
-        Log.i("GeminiService", "api url $API_URL")
         if (API_KEY.isBlank()) {
             System.err.println("FATAL ERROR: The Gemini API Key is missing. Please set the API_KEY constant in DefaultGeminiService.kt.")
             return null

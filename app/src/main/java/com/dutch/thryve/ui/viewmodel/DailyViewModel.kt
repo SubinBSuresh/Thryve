@@ -15,11 +15,13 @@ import com.dutch.thryve.domain.repository.FirebaseRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -52,48 +54,54 @@ class DailyViewModel @Inject constructor(
 
     private fun collectUserSettings() {
         val userId = auth.currentUser?.uid ?: return
-        firebaseRepository.getUserSettings(userId).onEach { settings ->
-            _uiState.update { currentState ->
-                val currentSettings = settings ?: UserSettings()
-                val newSummary = currentState.dailySummary.copy(
-                    targetCalories = currentSettings.targetCalories,
-                    targetProtein = currentSettings.targetProtein,
-                    targetCarbs = currentSettings.targetCarbs,
-                    targetFat = currentSettings.targetFat
-                )
-                currentState.copy(userSettings = currentSettings, dailySummary = newSummary)
-            }
-        }.launchIn(viewModelScope)
+        firebaseRepository.getUserSettings(userId)
+            .flowOn(Dispatchers.IO)
+            .onEach { settings ->
+                _uiState.update { currentState ->
+                    val currentSettings = settings ?: UserSettings()
+                    val newSummary = currentState.dailySummary.copy(
+                        targetCalories = currentSettings.targetCalories,
+                        targetProtein = currentSettings.targetProtein,
+                        targetCarbs = currentSettings.targetCarbs,
+                        targetFat = currentSettings.targetFat
+                    )
+                    currentState.copy(userSettings = currentSettings, dailySummary = newSummary)
+                }
+            }.launchIn(viewModelScope)
     }
 
     private fun collectMealLogs() {
         val userId = auth.currentUser?.uid ?: return
         selectedDateFlow.flatMapLatest { date ->
             firebaseRepository.getMealLogsForDate(userId, date)
-        }.onEach { logs ->
-            _uiState.update { currentState ->
-                val totalCalories = logs.sumOf { it.calories }
-                val totalProtein = logs.sumOf { it.protein }
-                val totalCarbs = logs.sumOf { it.carbs }
-                val totalFat = logs.sumOf { it.fat }
+        }
+            .flowOn(Dispatchers.IO)
+            .onEach { logs ->
+                _uiState.update { currentState ->
+                    val totalCalories = logs.sumOf { it.calories }
+                    val totalProtein = logs.sumOf { it.protein }
+                    val totalCarbs = logs.sumOf { it.carbs }
+                    val totalFat = logs.sumOf { it.fat }
 
-                val newSummary = currentState.dailySummary.copy(
-                    totalFoodCalories = totalCalories,
-                    currentProtein = totalProtein,
-                    currentCarbs = totalCarbs,
-                    currentFat = totalFat
-                )
-                currentState.copy(mealLogs = logs, dailySummary = newSummary)
-            }
-        }.launchIn(viewModelScope)
+                    val newSummary = currentState.dailySummary.copy(
+                        totalFoodCalories = totalCalories,
+                        currentProtein = totalProtein,
+                        currentCarbs = totalCarbs,
+                        currentFat = totalFat
+                    )
+                    currentState.copy(mealLogs = logs, dailySummary = newSummary)
+                }
+            }.launchIn(viewModelScope)
     }
 
     private fun collectFavoriteMeals() {
         val userId = auth.currentUser?.uid ?: return
-        firebaseRepository.getFavoriteMeals(userId).onEach { favorites ->
-            val distinctFavorites = favorites.distinctBy { it.description.trim().lowercase() }
-            _uiState.update { it.copy(favoriteMeals = distinctFavorites) }
-        }.launchIn(viewModelScope)
+        firebaseRepository.getFavoriteMeals(userId)
+            .flowOn(Dispatchers.IO)
+            .onEach { favorites ->
+                val distinctFavorites = favorites.distinctBy { it.description.trim().lowercase() }
+                _uiState.update { it.copy(favoriteMeals = distinctFavorites) }
+            }.launchIn(viewModelScope)
     }
 
     fun onAddMealClicked() {

@@ -1,5 +1,7 @@
 package com.dutch.thryve.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -24,6 +27,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
@@ -39,6 +44,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -69,11 +75,11 @@ fun RankedPRListItem(
     record: PersonalRecord, rank: Int, onEditClick: () -> Unit, onDeleteClick: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val (medalColor, textStyle) = when (rank) {
-        1 -> Pair(Color(0xFFFFD700), MaterialTheme.typography.titleSmall)
-        2 -> Pair(Color(0xFFC0C0C0), MaterialTheme.typography.bodyMedium)
-        3 -> Pair(Color(0xFFCD7F32), MaterialTheme.typography.bodySmall)
-        else -> Pair(Color.Transparent, MaterialTheme.typography.bodyLarge)
+    val (medalColor, medalLabel) = when (rank) {
+        1 -> Pair(Color(0xFFF59E0B), "🏆 1RM")
+        2 -> Pair(Color(0xFF94A3B8), "🥈 2nd")
+        3 -> Pair(Color(0xFFD97706), "🥉 3rd")
+        else -> Pair(Color.Transparent, "")
     }
 
     val formattedDate = remember(record.date) {
@@ -83,36 +89,42 @@ fun RankedPRListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp, horizontal = 8.dp),
+            .padding(vertical = 4.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (rank in 1..3) {
-            Icon(
-                imageVector = Icons.Outlined.EmojiEvents,
-                contentDescription = "Medal",
-                tint = medalColor,
-                modifier = Modifier.size(if (rank == 1) 20.dp else 16.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(medalColor.copy(alpha = 0.15f))
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = medalLabel,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = medalColor
+                )
+            }
         } else {
-            Spacer(modifier = Modifier.width(20.dp))
+            Spacer(modifier = Modifier.width(36.dp))
         }
 
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "${record.weight} kg x ${record.reps} reps",
-                style = textStyle,
-                color = if (rank == 1) MaterialTheme.colorScheme.primary else Color.Unspecified
+                text = "${record.weight} kg  ×  ${record.reps} reps",
+                style = if (rank == 1) MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.bodyMedium,
+                color = if (rank == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = formattedDate,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
-        if (rank == 1) { // Show actions only for the top PR
+        if (rank == 1) {
             Box {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(Icons.Default.MoreVert, contentDescription = "More actions")
@@ -132,7 +144,6 @@ fun RankedPRListItem(
     }
 }
 
-
 @Composable
 fun ExercisePRsItem(
     exerciseName: String,
@@ -140,17 +151,20 @@ fun ExercisePRsItem(
     onEditRecord: (PersonalRecord) -> Unit,
     onDeleteRecord: (PersonalRecord) -> Unit
 ) {
-    ElevatedCard(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
+            .padding(vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
-        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = exerciseName,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
             records.forEachIndexed { index, record ->
                 RankedPRListItem(

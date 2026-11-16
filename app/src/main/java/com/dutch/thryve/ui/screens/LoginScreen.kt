@@ -1,8 +1,11 @@
 package com.dutch.thryve.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -19,13 +22,16 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalAutofill
 import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.dutch.thryve.R
 import com.dutch.thryve.ui.viewmodel.AuthState
 import com.dutch.thryve.ui.viewmodel.AuthViewModel
 
@@ -57,7 +63,6 @@ fun LoginScreen(navController: NavHostController, viewModel: AuthViewModel = hil
 
     LaunchedEffect(authState) {
         if (authState is AuthState.Success) {
-            // Save credentials after successful login
             viewModel.saveCredentials(context, email, password)
             navController.navigate(Screen.Dashboard.route) {
                 popUpTo(Screen.Login.route) { inclusive = true }
@@ -68,21 +73,36 @@ fun LoginScreen(navController: NavHostController, viewModel: AuthViewModel = hil
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Welcome Back!",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold
+        // App Brand Header
+        Icon(
+            painter = painterResource(id = R.drawable.ic_thryve_leaf),
+            contentDescription = "Thryve Logo",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(64.dp)
         )
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = "THRYVE",
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black, letterSpacing = 2.sp),
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = "Welcome Back",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(36.dp))
 
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+            shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .onGloballyPositioned { emailAutofillNode.boundingBox = it.boundsInWindow() }
@@ -100,7 +120,6 @@ fun LoginScreen(navController: NavHostController, viewModel: AuthViewModel = hil
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
         
-        // Add nodes to the tree
         SideEffect {
             autofillTree += emailAutofillNode
             autofillTree += passwordAutofillNode
@@ -112,6 +131,8 @@ fun LoginScreen(navController: NavHostController, viewModel: AuthViewModel = hil
             value = password,
             onValueChange = { password = it },
             label = { Text("Password") },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+            shape = RoundedCornerShape(16.dp),
             visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             modifier = Modifier
                 .fillMaxWidth()
@@ -136,17 +157,20 @@ fun LoginScreen(navController: NavHostController, viewModel: AuthViewModel = hil
                     )
                 }
             })
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         Button(
             onClick = { viewModel.login(email, password) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(16.dp),
             enabled = authState !is AuthState.Loading
         ) {
             if (authState is AuthState.Loading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
             } else {
-                Text("Log In")
+                Text("Log In", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
             }
         }
 
@@ -163,7 +187,7 @@ fun LoginScreen(navController: NavHostController, viewModel: AuthViewModel = hil
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(onClick = { navController.navigate(Screen.Signup.route) }) {
-            Text("Don't have an account? Sign Up")
+            Text("Don't have an account? Sign Up", color = MaterialTheme.colorScheme.primary)
         }
     }
 }

@@ -1,39 +1,28 @@
 package com.dutch.thryve.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.dutch.thryve.R
 import com.dutch.thryve.ui.viewmodel.AuthState
 import com.dutch.thryve.ui.viewmodel.AuthViewModel
 
@@ -56,19 +45,39 @@ fun SignupScreen(navController: NavHostController, viewModel: AuthViewModel = hi
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Create an Account", style = MaterialTheme.typography.headlineLarge)
+        // App Brand Header
+        Icon(
+            painter = painterResource(id = R.drawable.ic_thryve_leaf),
+            contentDescription = "Thryve Logo",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(64.dp)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = "THRYVE",
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black, letterSpacing = 2.sp),
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = "Create Your Account",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             label = { Text("Name") },
+            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+            shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth(),
-            isError = authState is AuthState.Error
+            isError = authState is AuthState.Error,
+            singleLine = true
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -76,8 +85,12 @@ fun SignupScreen(navController: NavHostController, viewModel: AuthViewModel = hi
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+            shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth(),
-            isError = authState is AuthState.Error
+            isError = authState is AuthState.Error,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -85,9 +98,13 @@ fun SignupScreen(navController: NavHostController, viewModel: AuthViewModel = hi
             value = password,
             onValueChange = { password = it },
             label = { Text("Password") },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+            shape = RoundedCornerShape(16.dp),
             visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             isError = authState is AuthState.Error,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             trailingIcon = {
                 IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                     Icon(
@@ -97,17 +114,20 @@ fun SignupScreen(navController: NavHostController, viewModel: AuthViewModel = hi
                 }
             }
         )
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         Button(
             onClick = { viewModel.signup(name, email, password) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(16.dp),
             enabled = authState !is AuthState.Loading
         ) {
             if (authState is AuthState.Loading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
             } else {
-                Text("Sign Up")
+                Text("Sign Up", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -115,7 +135,7 @@ fun SignupScreen(navController: NavHostController, viewModel: AuthViewModel = hi
         if (authState is AuthState.Error) {
             Text(
                 text = (authState as AuthState.Error).message,
-                color = Color.Red,
+                color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -123,7 +143,7 @@ fun SignupScreen(navController: NavHostController, viewModel: AuthViewModel = hi
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(onClick = { navController.navigate(Screen.Login.route) }) {
-            Text("Already have an account? Log In")
+            Text("Already have an account? Log In", color = MaterialTheme.colorScheme.primary)
         }
     }
 }

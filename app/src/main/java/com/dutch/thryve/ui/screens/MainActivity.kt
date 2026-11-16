@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -102,6 +103,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object PR : Screen("pr", "PR", Icons.Default.EmojiEvents)
     object Profile : Screen("profile", "Profile", Icons.Default.Person)
     object Supplements : Screen("supplements", "Supplements",Icons.Default.Medication)
+    object Developer : Screen("developer", "Developer", Icons.Default.Build)
 }
 
 val bottomNavItems = listOf(Screen.Dashboard, Screen.Nutrition, Screen.PR, Screen.Supplements, Screen.Profile)
@@ -185,7 +187,8 @@ fun MainScreen() {
             composable(Screen.Nutrition.route) { DailyScreen(navController) }
             composable(Screen.PR.route) { PRScreen(navController) }
             composable(Screen.Profile.route) { ProfileScreen(navController) }
-            composable(Screen.Supplements.route) {SupplementsScreen()}
+            composable(Screen.Supplements.route) { SupplementsScreen() }
+            composable(Screen.Developer.route) { DeveloperScreen(navController) }
         }
     }
 }

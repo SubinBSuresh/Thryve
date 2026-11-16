@@ -2,30 +2,30 @@ package com.dutch.thryve.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Light Theme Colors
-val primaryLight = Color(0xFF03A9F4) // A clear, vibrant blue
-val onPrimaryLight = Color.White
-val secondaryLight = Color(0xFF4CAF50) // A friendly, encouraging green
-val onSecondaryLight = Color.White
-val tertiaryLight = Color(0xFFFFA000) // A warm amber for highlights
-val backgroundLight = Color(0xFFF7F9FC) // A very light, clean gray
-val onBackgroundLight = Color(0xFF1A1C1E)
-val surfaceLight = Color.White
-val onSurfaceLight = Color(0xFF1A1C1E)
-val surfaceVariantLight = Color(0xFFE0E3E9)
-val onSurfaceVariantLight = Color(0xFF43474E)
-val errorLight = Color(0xFFB00020)
+// Light Theme Colors (Clean Slate & Sky Cyan)
+val primaryLight = Color(0xFF0284C7) // Sky Cyan Primary
+val onPrimaryLight = Color(0xFFFFFFFF)
+val secondaryLight = Color(0xFF475569) // Muted Slate Accent
+val onSecondaryLight = Color(0xFFFFFFFF)
+val tertiaryLight = Color(0xFFD97706) // Warm Amber Target Accent
+val backgroundLight = Color(0xFFF8FAFC) // Crisp Porcelain Background
+val onBackgroundLight = Color(0xFF0F172A)
+val surfaceLight = Color(0xFFFFFFFF)
+val onSurfaceLight = Color(0xFF0F172A)
+val surfaceVariantLight = Color(0xFFF1F5F9)
+val onSurfaceVariantLight = Color(0xFF64748B)
+val errorLight = Color(0xFFDC2626)
 
-// Dark Theme Colors
-val primaryDark = Color(0xFF53CDE2) // A softer, more desaturated cyan for dark mode
-val onPrimaryDark = Color(0xFF00353E)
-val secondaryDark = Color(0xFF66BB6A) // A slightly muted green
-val onSecondaryDark = Color.Black
-val tertiaryDark = Color(0xFFFFB74D) // A gentler orange
-val backgroundDark = Color(0xFF121212) // A standard dark background
-val onBackgroundDark = Color(0xFFE2E2E6)
-val surfaceDark = Color(0xFF1E1E1E) // A slightly lighter surface for cards
-val onSurfaceDark = Color(0xFFE2E2E6)
-val surfaceVariantDark = Color(0xFF2C2F33)
-val onSurfaceVariantDark = Color(0xFFC1C7CE)
-val errorDark = Color(0xFFCF6679)
+// Dark Theme Colors (Deep Obsidian & Refined Sky Cyan - MacroFactor / Hevy Aesthetic)
+val primaryDark = Color(0xFF38BDF8) // Bright Sky Cyan Primary
+val onPrimaryDark = Color(0xFF075985)
+val secondaryDark = Color(0xFF94A3B8) // Muted Cool Slate
+val onSecondaryDark = Color(0xFF0F172A)
+val tertiaryDark = Color(0xFFFACC15) // Soft Golden Accent
+val backgroundDark = Color(0xFF0B0F17) // Deep Obsidian Dark Background
+val onBackgroundDark = Color(0xFFF8FAFC)
+val surfaceDark = Color(0xFF131B2A) // Refined Slate Card Surface
+val onSurfaceDark = Color(0xFFF8FAFC)
+val surfaceVariantDark = Color(0xFF1C2638) // Elevated Surface Container
+val onSurfaceVariantDark = Color(0xFF94A3B8)
+val errorDark = Color(0xFFF87171)

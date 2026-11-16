@@ -6,6 +6,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,14 +20,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -44,6 +49,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.abs
 
 private val DATE_FORMATTER_HEADER = DateTimeFormatter.ofPattern("EEE, MMM d")
 
@@ -156,15 +162,19 @@ fun DailyScreen(navController: NavHostController, viewModel: DailyViewModel = hi
 @Composable
 fun DateSelectorRow(selectedDate: LocalDate, onDateSelected: (LocalDate) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
-    val today = LocalDate.now()
+    val today = remember { LocalDate.now() }
     val dates = remember { (-365..365).map { today.plusDays(it.toLong()) } }
-    val listState = rememberLazyListState()
+    val initialIndex = remember { maxOf(0, dates.indexOf(selectedDate) - 2) }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
 
     LaunchedEffect(selectedDate) {
         val index = dates.indexOf(selectedDate)
         if (index != -1) {
-            coroutineScope.launch {
-                listState.animateScrollToItem(maxOf(0, index - 2))
+            val targetIndex = maxOf(0, index - 2)
+            if (abs(listState.firstVisibleItemIndex - targetIndex) > 10) {
+                listState.scrollToItem(targetIndex)
+            } else {
+                listState.animateScrollToItem(targetIndex)
             }
         }
     }
@@ -175,7 +185,7 @@ fun DateSelectorRow(selectedDate: LocalDate, onDateSelected: (LocalDate) -> Unit
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
-        items(dates) { date ->
+        items(dates, key = { it.toString() }) { date ->
             DateSelectionCard(date = date, isSelected = date == selectedDate, onDateSelected = onDateSelected)
         }
     }
@@ -184,12 +194,13 @@ fun DateSelectorRow(selectedDate: LocalDate, onDateSelected: (LocalDate) -> Unit
 @Composable
 fun DateSelectionCard(date: LocalDate, isSelected: Boolean, onDateSelected: (LocalDate) -> Unit) {
     val isToday = date == LocalDate.now()
-    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-    val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
+    val contentColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
 
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
         modifier = Modifier
             .width(62.dp)
             .height(84.dp)
@@ -203,20 +214,20 @@ fun DateSelectionCard(date: LocalDate, isSelected: Boolean, onDateSelected: (Loc
             verticalArrangement = Arrangement.Center
         ) {
             val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-            Text(dayName, style = MaterialTheme.typography.labelSmall, color = contentColor)
+            Text(dayName.uppercase(), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = contentColor)
             Spacer(Modifier.height(2.dp))
             Text(
                 date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                color = contentColor
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
             if (isToday) {
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(4.dp))
                 Box(
                     modifier = Modifier
-                        .size(6.dp)
+                        .size(4.dp)
                         .clip(CircleShape)
-                        .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary)
+                        .background(MaterialTheme.colorScheme.primary)
                 )
             }
         }
@@ -227,40 +238,68 @@ fun DateSelectionCard(date: LocalDate, isSelected: Boolean, onDateSelected: (Loc
 fun DailySummaryCard(dailySummary: DailySummary) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text("Remaining Calories", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            text = dailySummary.remainingCalories.toString(),
-                            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Black, fontSize = 36.sp),
-                            color = if (dailySummary.remainingCalories >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                        )
-                        Text(" kcal", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
-                    }
+        Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            // Hero Arc Gauge
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(150.dp)) {
+                val primaryColor = if (dailySummary.remainingCalories >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                val trackColor = primaryColor.copy(alpha = 0.12f)
+                val progress = if (dailySummary.targetCalories > 0) {
+                    (dailySummary.totalFoodCalories.toFloat() / dailySummary.targetCalories.toFloat()).coerceIn(0f, 1f)
+                } else 0f
+
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val strokeWidth = 10.dp.toPx()
+                    val diameter = size.minDimension - strokeWidth
+                    val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
+                    val arcSize = Size(diameter, diameter)
+
+                    drawArc(
+                        color = trackColor,
+                        startAngle = 150f,
+                        sweepAngle = 240f,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    )
+
+                    drawArc(
+                        color = primaryColor,
+                        startAngle = 150f,
+                        sweepAngle = 240f * progress,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    )
                 }
-                Icon(
-                    imageVector = Icons.Filled.LocalFireDepartment,
-                    contentDescription = null,
-                    tint = if (dailySummary.remainingCalories >= 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                    modifier = Modifier.size(48.dp)
-                )
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = dailySummary.remainingCalories.toString(),
+                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold, fontSize = 36.sp),
+                        color = if (dailySummary.remainingCalories >= 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = "REMAINING KCAL",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+            Spacer(Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 SummaryStat(value = "${dailySummary.totalFoodCalories}", label = "Food", color = MaterialTheme.colorScheme.onSurface)
-                SummaryStat(value = "${dailySummary.currentProtein}g", label = "Protein", color = MaterialTheme.colorScheme.tertiary, target = dailySummary.targetProtein)
-                SummaryStat(value = "${dailySummary.currentCarbs}g", label = "Carbs", color = MaterialTheme.colorScheme.secondary, target = dailySummary.targetCarbs)
+                SummaryStat(value = "${dailySummary.currentProtein}g", label = "Protein", color = MaterialTheme.colorScheme.primary, target = dailySummary.targetProtein)
+                SummaryStat(value = "${dailySummary.currentCarbs}g", label = "Carbs", color = MaterialTheme.colorScheme.primary, target = dailySummary.targetCarbs)
                 SummaryStat(value = "${dailySummary.currentFat}g", label = "Fats", color = MaterialTheme.colorScheme.primary, target = dailySummary.targetFat)
             }
         }
@@ -270,7 +309,7 @@ fun DailySummaryCard(dailySummary: DailySummary) {
 @Composable
 fun SummaryStat(value: String, label: String, color: Color, target: Int = 0) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(68.dp)) {
-        Text(value, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = color)
+        Text(value, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = color)
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (target > 0) {
             val currentVal = value.filter { it.isDigit() }.toIntOrNull() ?: 0
@@ -283,7 +322,7 @@ fun SummaryStat(value: String, label: String, color: Color, target: Int = 0) {
                     .height(4.dp)
                     .clip(CircleShape),
                 color = color,
-                trackColor = color.copy(alpha = 0.2f)
+                trackColor = color.copy(alpha = 0.15f)
             )
         }
     }
@@ -292,7 +331,7 @@ fun SummaryStat(value: String, label: String, color: Color, target: Int = 0) {
 @Composable
 fun MealLogList(logs: List<MealLog>, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> Unit, onToggleFavorite: (MealLog) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        Text("Meal Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+        Text("Logged Meals", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
         LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(logs) { log -> MealLogCard(log, onEdit, onDelete, onToggleFavorite) }
             item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -303,27 +342,29 @@ fun MealLogList(logs: List<MealLog>, onEdit: (MealLog) -> Unit, onDelete: (MealL
 @Composable
 fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> Unit, onToggleFavorite: (MealLog) -> Unit) {
     var showMenu by remember { mutableStateOf(false) }
-    val mealIcon = when (log.mealType.lowercase()) {
-        "breakfast" -> "🍳"
-        "lunch" -> "🥗"
-        "dinner" -> "🍕"
-        "snack" -> "🍎"
-        else -> "🍽️"
-    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(12.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "$mealIcon ", style = MaterialTheme.typography.labelMedium)
-                        Text(text = log.mealType, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = log.mealType.uppercase(),
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(6.dp))
                     Text(log.description, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
                 }
                 Box {
@@ -335,12 +376,12 @@ fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> 
                     }
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MacroStat("Cal", "${log.calories}", MaterialTheme.colorScheme.error)
-                MacroStat("Protein", "${log.protein}g", MaterialTheme.colorScheme.tertiary)
-                MacroStat("Carbs", "${log.carbs}g", MaterialTheme.colorScheme.secondary)
-                MacroStat("Fats", "${log.fat}g", MaterialTheme.colorScheme.primary)
+                MacroStat("Calories", "${log.calories} kcal", MaterialTheme.colorScheme.onSurface)
+                MacroStat("Protein", "${log.protein}g", MaterialTheme.colorScheme.primary)
+                MacroStat("Carbs", "${log.carbs}g", MaterialTheme.colorScheme.primary)
+                MacroStat("Fat", "${log.fat}g", MaterialTheme.colorScheme.primary)
             }
         }
     }

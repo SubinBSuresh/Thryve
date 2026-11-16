@@ -1,30 +1,42 @@
 package com.dutch.thryve.ui.screens
 
-import android.util.Log
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.dutch.thryve.ui.viewmodel.ExportDuration
 import com.dutch.thryve.ui.viewmodel.ExportOptions
 import com.dutch.thryve.ui.viewmodel.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
+
+private val EMOJI_AVATARS = listOf(
+    "🦁", "⚡", "🏋️‍♂️", "🎯", "🔥", "🥗", "🏆", "🚀", "🦍", "🥑", "🦾", "🥇"
+)
 
 @Composable
 fun ProfileScreen(navController: NavHostController, viewModel: ProfileViewModel = hiltViewModel()) {
@@ -33,11 +45,13 @@ fun ProfileScreen(navController: NavHostController, viewModel: ProfileViewModel 
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager = LocalClipboardManager.current
     
+    var selectedEmoji by remember { mutableStateOf("⚡") }
+    var showEmojiPicker by remember { mutableStateOf(false) }
     var profileTapCount by remember { mutableStateOf(0) }
 
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) {
-            snackbarHostState.showSnackbar("Goals saved")
+            snackbarHostState.showSnackbar("Goals saved successfully")
         }
     }
 
@@ -56,123 +70,199 @@ fun ProfileScreen(navController: NavHostController, viewModel: ProfileViewModel 
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { paddingValues ->
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             if (uiState.isLoading) {
-                CircularProgressIndicator()
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             } else {
+                // Profile Avatar with Emoji Picker
                 Box(
                     modifier = Modifier
-                        .size(120.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
+                        .size(110.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable {
                             profileTapCount++
                             if (profileTapCount >= 8) {
                                 viewModel.setShowApiKeyDialog(true)
                                 profileTapCount = 0
+                            } else {
+                                showEmojiPicker = true
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = selectedEmoji,
+                        fontSize = 54.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(4.dp)
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Change Avatar",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                var nameTapCount by remember { mutableStateOf(0) }
+                Text(
+                    text = currentUser?.displayName ?: "Athlete",
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.clickable {
+                        nameTapCount++
+                        if (nameTapCount >= 5) {
+                            nameTapCount = 0
+                            navController.navigate(Screen.Developer.route)
+                        }
+                    }
+                )
+                Text(
+                    text = currentUser?.email ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Daily Nutrition Goals Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "DAILY NUTRITION GOALS",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            TextButton(
+                                onClick = {
+                                    if (uiState.isEditing) {
+                                        viewModel.saveUserSettings()
+                                    } else {
+                                        viewModel.onEditToggled(true)
+                                    }
+                                }
+                            ) {
+                                Text(if (uiState.isEditing) "Save" else "Edit")
                             }
                         }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AccountCircle,
-                        contentDescription = "Profile Picture",
-                        modifier = Modifier.fillMaxSize(),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                Text(
-                    text = currentUser?.displayName ?: "User",
-                    style = MaterialTheme.typography.headlineMedium
-                )
+                        OutlinedTextField(
+                            value = uiState.userSettings.targetCalories.toString(),
+                            onValueChange = viewModel::onTargetCaloriesChanged,
+                            label = { Text("Target Calories (kcal)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = uiState.isEditing,
+                            shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(
-                    value = uiState.userSettings.targetCalories.toString(),
-                    onValueChange = viewModel::onTargetCaloriesChanged,
-                    label = { Text("Target Calories") },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = uiState.isEditing,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = uiState.userSettings.targetProtein.toString(),
-                        onValueChange = viewModel::onTargetProteinChanged,
-                        label = { Text("Protein (g)") },
-                        modifier = Modifier.weight(1f),
-                        enabled = uiState.isEditing,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.userSettings.targetCarbs.toString(),
-                        onValueChange = viewModel::onTargetCarbsChanged,
-                        label = { Text("Carbs (g)") },
-                        modifier = Modifier.weight(1f),
-                        enabled = uiState.isEditing,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                    OutlinedTextField(
-                        value = uiState.userSettings.targetFat.toString(),
-                        onValueChange = viewModel::onTargetFatChanged,
-                        label = { Text("Fat (g)") },
-                        modifier = Modifier.weight(1f),
-                        enabled = uiState.isEditing,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = {
-                        if (uiState.isEditing) {
-                            viewModel.saveUserSettings()
-                        } else {
-                            viewModel.onEditToggled(true)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = uiState.userSettings.targetProtein.toString(),
+                                onValueChange = viewModel::onTargetProteinChanged,
+                                label = { Text("Protein (g)") },
+                                modifier = Modifier.weight(1f),
+                                enabled = uiState.isEditing,
+                                shape = RoundedCornerShape(12.dp),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                            OutlinedTextField(
+                                value = uiState.userSettings.targetCarbs.toString(),
+                                onValueChange = viewModel::onTargetCarbsChanged,
+                                label = { Text("Carbs (g)") },
+                                modifier = Modifier.weight(1f),
+                                enabled = uiState.isEditing,
+                                shape = RoundedCornerShape(12.dp),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                            OutlinedTextField(
+                                value = uiState.userSettings.targetFat.toString(),
+                                onValueChange = viewModel::onTargetFatChanged,
+                                label = { Text("Fat (g)") },
+                                modifier = Modifier.weight(1f),
+                                enabled = uiState.isEditing,
+                                shape = RoundedCornerShape(12.dp),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(if (uiState.isEditing) "Save goals" else "Edit goals")
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedButton(
                     onClick = { viewModel.setShowExportDialog(true) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 ) {
-                    Icon(Icons.Default.FileDownload, contentDescription = null)
-                    Spacer(Modifier.size(8.dp))
-                    Text("Export Data to Clipboard")
+                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Export Data to Clipboard", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.weight(1f))
 
-                IconButton(onClick = { viewModel.logout() }) {
-                    Icon(Icons.Filled.Logout, contentDescription = "Logout")
+                TextButton(
+                    onClick = { viewModel.logout() },
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    Icon(Icons.Filled.Logout, contentDescription = "Logout", tint = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Log Out", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                 }
             }
+        }
+
+        if (showEmojiPicker) {
+            EmojiPickerDialog(
+                onDismiss = { showEmojiPicker = false },
+                onSelect = {
+                    selectedEmoji = it
+                    showEmojiPicker = false
+                }
+            )
         }
 
         if (uiState.showExportDialog) {
@@ -189,6 +279,38 @@ fun ProfileScreen(navController: NavHostController, viewModel: ProfileViewModel 
             )
         }
     }
+}
+
+@Composable
+fun EmojiPickerDialog(onDismiss: () -> Unit, onSelect: (String) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Choose Profile Emoji", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
+        text = {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(vertical = 8.dp)
+            ) {
+                items(EMOJI_AVATARS) { emoji ->
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { onSelect(emoji) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(emoji, fontSize = 28.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
