@@ -244,9 +244,9 @@ class DailyViewModel @Inject constructor(
             _uiState.update { it.copy(isAwaitingAi = true, showInputDialog = false) }
             try {
                 val date = uiState.value.selectedDate
-//                val mealLog = geminiService.analyzeMeal(mealDescription, date)
+                val mealLog = geminiService.analyzeMeal(mealDescription, date)
 //                val mealLog = openAIService.analyzeMeal(mealDescription, date)
-                val mealLog = openRouterService.analyzeMeal(mealDescription, date)
+//                val mealLog = openRouterService.analyzeMeal(mealDescription, date)
 
                 if (mealLog != null) {
                     val finalMealLog = mealLog.copy(
@@ -268,8 +268,7 @@ class DailyViewModel @Inject constructor(
         }
     }
 
-    fun toggleInputDialog(show: Boolean) {
-        if (!show) {
+    fun toggleInputDialog(show: Boolean) {        if (!show) {
             _uiState.update { 
                 it.copy(
                     showInputDialog = false, 

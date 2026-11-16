@@ -6,6 +6,7 @@ import com.dutch.thryve.domain.model.MealLog
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import java.time.LocalDate
@@ -20,8 +21,9 @@ import java.util.UUID
 
 
 private const val API_KEY = BuildConfig.GEMINI_API_KEY
-private const val GEMINI_MODEL = "gemini-2.0-flash"
-private const val API_URL = "https://generativelanguage.googleapis.com/v1/models/$GEMINI_MODEL:generateContent?key=$API_KEY"
+private const val GEMINI_MODEL = "gemini-3.5-flash"
+// Using v1beta for better support of systemInstruction and responseSchema
+private const val API_URL = "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent?key=$API_KEY"
 
 // --- @SERIALIZABLE DATA CLASSES FOR API REQUEST PAYLOAD ---
 
@@ -40,7 +42,9 @@ data class GeminiAnalysisSchema(
 
 @Serializable
 data class GenerationConfig(
+    @SerialName("response_mime_type")
     val responseMimeType: String,
+    @SerialName("response_schema")
     val responseSchema: GeminiAnalysisSchema
 )
 
@@ -48,7 +52,10 @@ data class GenerationConfig(
 data class SystemInstruction(val parts: List<Part>)
 
 @Serializable
-data class Tool(val google_search: Map<String, String> = emptyMap())
+data class Tool(
+    @SerialName("google_search_retrieval")
+    val googleSearchRetrieval: Map<String, String>? = null
+)
 
 @Serializable
 data class Part(val text: String)
@@ -60,8 +67,10 @@ data class Content(val parts: List<Part>)
 @Serializable
 data class GeminiRequest(
     val contents: List<Content>,
-    val tools: List<Tool>,
+    val tools: List<Tool>? = null,
+    @SerialName("system_instruction")
     val systemInstruction: SystemInstruction,
+    @SerialName("generation_config")
     val generationConfig: GenerationConfig
 )
 // --- END API PAYLOAD CLASSES ---
@@ -136,7 +145,8 @@ class GeminiService @Inject constructor() {
         // constructing api payload
         val payload = GeminiRequest(
             contents = listOf(Content(parts = listOf(Part(text = userQuery)))),
-            tools = listOf(Tool(google_search = emptyMap())),
+            // Removing tools if not explicitly needed to avoid potential "Unknown name" errors if the schema is strict
+            tools = null, 
             systemInstruction = SystemInstruction(parts = listOf(Part(text = systemPrompt))),
             generationConfig = GenerationConfig(
                 responseMimeType = "application/json",

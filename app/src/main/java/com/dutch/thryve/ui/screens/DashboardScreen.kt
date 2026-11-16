@@ -20,12 +20,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -214,16 +215,18 @@ fun WeeklyTrendCard(dailyData: List<DailyCalorieData>, dailyGoal: Int) {
             Spacer(Modifier.height(24.dp))
             
             val maxCal = (dailyData.maxOfOrNull { it.calories } ?: 0).coerceAtLeast(dailyGoal).toFloat() * 1.2f
-            val density = LocalDensity.current
-            val labelTextSize = with(density) { 10.sp.toPx() }
-            
+            val textMeasurer = rememberTextMeasurer()
+            val labelStyle = MaterialTheme.typography.labelSmall.copy(
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             val barColor = MaterialTheme.colorScheme.primary
             val errorColor = MaterialTheme.colorScheme.error
-            val goalColor = errorColor.copy(alpha = 0.3f)
+            val goalColor = errorColor.copy(alpha = 0.4f)
 
-            Canvas(modifier = Modifier.fillMaxWidth().height(150.dp)) {
+            Canvas(modifier = Modifier.fillMaxWidth().height(160.dp)) {
                 val canvasWidth = size.width
-                val canvasHeight = size.height
+                val canvasHeight = size.height - 24.dp.toPx()
                 val barWidth = canvasWidth / (dailyData.size * 2f)
                 val spaceBetween = canvasWidth / dailyData.size
 
@@ -240,27 +243,26 @@ fun WeeklyTrendCard(dailyData: List<DailyCalorieData>, dailyGoal: Int) {
                     val barHeight = if (maxCal > 0) (data.calories / maxCal) * canvasHeight else 0f
                     val x = (index * spaceBetween) + (spaceBetween / 2) - (barWidth / 2)
                     
-                    // Draw Bar
-                    drawRect(
-                        color = if (data.calories > dailyGoal) errorColor.copy(alpha = 0.7f) else barColor,
-                        topLeft = Offset(x, canvasHeight - barHeight),
-                        size = Size(barWidth, barHeight)
-                    )
+                    // Draw Rounded Bar
+                    if (barHeight > 0) {
+                        drawRoundRect(
+                            color = if (data.calories > dailyGoal) errorColor.copy(alpha = 0.8f) else barColor,
+                            topLeft = Offset(x, canvasHeight - barHeight),
+                            size = Size(barWidth, barHeight),
+                            cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                        )
+                    }
 
-                    // Draw Day Label
-                    drawContext.canvas.nativeCanvas.drawText(
-                        data.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
-                        x + (barWidth / 2),
-                        canvasHeight + 20.dp.toPx(),
-                        android.graphics.Paint().apply {
-                            color = android.graphics.Color.GRAY
-                            textSize = labelTextSize
-                            textAlign = android.graphics.Paint.Align.CENTER
-                        }
+                    // Draw Day Label with Compose TextMeasurer
+                    val dayName = data.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                    val textResult = textMeasurer.measure(dayName, labelStyle)
+                    drawText(
+                        textLayoutResult = textResult,
+                        topLeft = Offset(x + (barWidth - textResult.size.width) / 2f, canvasHeight + 6.dp.toPx())
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }

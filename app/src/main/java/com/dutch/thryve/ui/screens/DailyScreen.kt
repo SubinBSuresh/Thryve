@@ -183,23 +183,42 @@ fun DateSelectorRow(selectedDate: LocalDate, onDateSelected: (LocalDate) -> Unit
 
 @Composable
 fun DateSelectionCard(date: LocalDate, isSelected: Boolean, onDateSelected: (LocalDate) -> Unit) {
+    val isToday = date == LocalDate.now()
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
     val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
 
     Card(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        modifier = Modifier.width(60.dp).height(80.dp).clickable { onDateSelected(date) }
+        modifier = Modifier
+            .width(62.dp)
+            .height(84.dp)
+            .clickable { onDateSelected(date) }
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
             Text(dayName, style = MaterialTheme.typography.labelSmall, color = contentColor)
-            Spacer(Modifier.height(4.dp))
-            Text(date.dayOfMonth.toString(), style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = contentColor)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                date.dayOfMonth.toString(),
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                color = contentColor
+            )
+            if (isToday) {
+                Spacer(Modifier.height(2.dp))
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary)
+                )
+            }
         }
     }
 }
@@ -212,9 +231,13 @@ fun DailySummaryCard(dailySummary: DailySummary) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Column {
-                    Text("Remaining", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Remaining Calories", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
                             text = dailySummary.remainingCalories.toString(),
@@ -227,12 +250,12 @@ fun DailySummaryCard(dailySummary: DailySummary) {
                 Icon(
                     imageVector = Icons.Filled.LocalFireDepartment,
                     contentDescription = null,
-                    tint = if (dailySummary.remainingCalories >= 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
+                    tint = if (dailySummary.remainingCalories >= 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
                     modifier = Modifier.size(48.dp)
                 )
             }
 
-            Divider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 SummaryStat(value = "${dailySummary.totalFoodCalories}", label = "Food", color = MaterialTheme.colorScheme.onSurface)
@@ -246,19 +269,22 @@ fun DailySummaryCard(dailySummary: DailySummary) {
 
 @Composable
 fun SummaryStat(value: String, label: String, color: Color, target: Int = 0) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(68.dp)) {
         Text(value, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = color)
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (target > 0) {
             val currentVal = value.filter { it.isDigit() }.toIntOrNull() ?: 0
-            val indicatorColor = when (label) {
-                "Protein" -> if (currentVal >= target) Color.Green else Color.Transparent
-                else -> if (currentVal > target) Color.Red else Color.Transparent
-            }
-            if (indicatorColor != Color.Transparent) {
-                Spacer(Modifier.height(4.dp))
-                Box(Modifier.size(4.dp).clip(CircleShape).background(indicatorColor))
-            }
+            val progress = (currentVal.toFloat() / target.toFloat()).coerceIn(0f, 1f)
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(CircleShape),
+                color = color,
+                trackColor = color.copy(alpha = 0.2f)
+            )
         }
     }
 }
@@ -269,7 +295,6 @@ fun MealLogList(logs: List<MealLog>, onEdit: (MealLog) -> Unit, onDelete: (MealL
         Text("Meal Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
         LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(logs) { log -> MealLogCard(log, onEdit, onDelete, onToggleFavorite) }
-            // Add a spacer at the bottom to ensure the FAB doesn't hide the last item
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
@@ -278,11 +303,27 @@ fun MealLogList(logs: List<MealLog>, onEdit: (MealLog) -> Unit, onDelete: (MealL
 @Composable
 fun MealLogCard(log: MealLog, onEdit: (MealLog) -> Unit, onDelete: (MealLog) -> Unit, onToggleFavorite: (MealLog) -> Unit) {
     var showMenu by remember { mutableStateOf(false) }
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+    val mealIcon = when (log.mealType.lowercase()) {
+        "breakfast" -> "🍳"
+        "lunch" -> "🥗"
+        "dinner" -> "🍕"
+        "snack" -> "🍎"
+        else -> "🍽️"
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(12.dp)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = log.mealType, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "$mealIcon ", style = MaterialTheme.typography.labelMedium)
+                        Text(text = log.mealType, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(Modifier.height(2.dp))
                     Text(log.description, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
                 }
                 Box {
